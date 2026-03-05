@@ -144,6 +144,8 @@ npm run dev
 
 Frontend runs at `http://localhost:5173`.
 
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/1c6c79e3-c9e4-41fd-8fc8-58d5d0f74e2e" />
+
 ## API summary
 
 ### Public/auth
