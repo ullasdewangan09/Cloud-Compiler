@@ -1,0 +1,21 @@
+for backend - 
+1. cd backend
+2. venv/Scripts/activate
+3. uvicorn main:app --reload
+
+for worker - 
+1. cd worker
+2. py worker.py
+
+for redis - 
+docker ps
+redis-cli - 
+    docker exec -it amazing_snyder redis-cli (to add the jobs in queue)
+    docker exec -it amazing_snyder redis-cli DEL code_queue(to remove jobs from the queue)
+    # Queue size
+    docker exec -it amazing_snyder redis-cli LLEN code_queue
+    # Queue items
+    docker exec -it amazing_snyder redis-cli LRANGE code_queue 0 -1
+
+
+for frontend - 

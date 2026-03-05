@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: python-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: python-worker
+  template:
+    metadata:
+      labels:
+        app: python-worker
+    spec:
+      containers:
+      - name: python-worker
+        image: python-runner:latest
+        imagePullPolicy: Never
+        command: ["sh", "-c"]
+        args: ["while true; do sleep 3600; done"]
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"

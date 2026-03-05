@@ -1,0 +1,91 @@
+Build a complete replacement frontend for my project “Cloud Compiler Studio”.
+
+Tech stack requirements:
+- Vite + React + TypeScript
+- Keep it production-ready and componentized
+- Use modern CSS (or Tailwind) with a “liquid glass” aesthetic and pastel palette
+- Responsive on desktop + mobile
+- No backend changes, no worker changes
+
+Important: generate only frontend code. Do not modify backend/worker architecture.
+
+Backend context (FastAPI):
+- Base URL: http://localhost:8000
+- Public endpoints:
+  - GET /
+  - POST /auth/register  (JSON: { username, email, password })
+  - POST /auth/login (OAuth2 form-data: username, password) -> { access_token, token_type }
+  - POST /execute (JSON: { code, language, input }) -> async queue submit, returns { status, job_id, ... }
+  - GET /execute/result/{job_id} -> pending/completed result
+  - POST /execute/sync (JSON: { code, language, input }) -> immediate execution result
+  - POST /import-file (multipart file upload) -> { filename, code }
+  - POST /export-file (JSON: { filename, code, type: "code"|"pdf" }) -> downloadable file
+- Admin-protected endpoints (Bearer token required, admin role):
+  - GET /metrics/queue
+  - GET /metrics/workers
+  - GET /metrics/system
+  - GET /metrics/jobs
+  - GET /visualization/dashboard
+
+Current backend/workers rely on:
+- Redis queue
+- worker.py consuming jobs
+- Docker execution
+- autoscaler
+Do not break these assumptions in frontend behavior.
+
+Frontend features to implement:
+1) Auth
+- Register page
+- Login page
+- Token storage and auth context
+- Auto-logout on 401
+- Protected routes for metrics/dashboard pages
+
+2) Compiler Workspace
+- Monaco-like code editor (or equivalent)
+- Language selector: python, c, cpp, java
+- stdin input box
+- Run Async button: POST /execute then poll GET /execute/result/{job_id}
+- Run Sync button: POST /execute/sync
+- Output panel with status badges (submitted, pending, completed, success, runtime_error, timeout, system_error)
+- Execution history list in local state
+
+3) Import/Export
+- Import code file via /import-file
+- Export code text file or PDF via /export-file
+- Download should trigger browser file save properly
+
+4) Monitoring/Admin
+- Metrics page consuming /metrics/*
+- Visualization dashboard page consuming /visualization/dashboard
+- Graceful handling for non-admin users (show access-denied state)
+
+5) UI/UX direction (liquid glass + pastel)
+- Frosted glass cards, backdrop blur, translucent borders
+- Pastel palette (mint, sky, peach, lavender accents used subtly)
+- Smooth transitions, hover depth, soft shadows
+- Accessible contrast and readable typography
+- Avoid generic template look
+
+Project/file output expectations:
+- Provide full frontend folder structure and all source files
+- Include:
+  - src/pages (Login, Register, Workspace, Metrics, Dashboard)
+  - src/components (editor, output, navbar, cards, charts/widgets)
+  - src/services/api client layer
+  - src/context/auth context
+  - src/styles/theme tokens (colors, glass effects, spacing, radii)
+  - routing setup
+- Include `.env.example` with `VITE_API_BASE_URL`
+- Include clear run steps:
+  - npm install
+  - npm run dev
+  - npm run build
+
+Quality bar:
+- Clean architecture
+- Reusable components
+- Strong TypeScript typing
+- Error/loading/empty states everywhere
+- No fake APIs; connect to real endpoints listed above
