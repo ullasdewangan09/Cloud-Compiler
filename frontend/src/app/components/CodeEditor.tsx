@@ -1,7 +1,6 @@
 import Editor from '@monaco-editor/react';
 import { GlassCard } from './GlassCard';
 import { Loader2 } from 'lucide-react';
-import { sanitizeCodeText } from '../../utils/codeSanitizer';
 
 interface CodeEditorProps {
   code: string;
@@ -34,7 +33,7 @@ export function CodeEditor({ code, language, onChange, readOnly = false }: CodeE
           height="100%"
           language={getMonacoLanguage(language)}
           value={code}
-          onChange={(value) => onChange(sanitizeCodeText(value || ''))}
+          onChange={(value) => onChange(value || '')}
           theme="vs-dark"
           options={{
             minimap: { enabled: false },
@@ -45,6 +44,11 @@ export function CodeEditor({ code, language, onChange, readOnly = false }: CodeE
             automaticLayout: true,
             tabSize: 2,
             wordWrap: 'on',
+            autoIndent: 'full',
+            autoClosingBrackets: 'languageDefined',
+            autoClosingQuotes: 'languageDefined',
+            autoSurround: 'languageDefined',
+            formatOnType: true,
             readOnly,
           }}
           loading={

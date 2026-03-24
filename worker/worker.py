@@ -138,7 +138,7 @@ def execute_code(code, language, user_input=""):
 
 
 def worker_loop():
-    print("[worker] Worker started...")
+    print("🚀 Worker started...")
     update_worker_status("idle")
 
     while True:
