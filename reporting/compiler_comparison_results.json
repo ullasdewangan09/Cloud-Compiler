@@ -1,0 +1,533 @@
+{
+  "environment": {
+    "python_launcher": "C:\\Users\\dewan\\AppData\\Local\\Programs\\Python\\Launcher\\py.EXE",
+    "gcc": "C:\\MinGW\\bin\\gcc.EXE",
+    "gpp": "C:\\MinGW\\bin\\g++.EXE",
+    "venv_python": "C:\\Users\\dewan\\Programming Projects\\Cloud Compiler\\.venv\\Scripts\\python.exe"
+  },
+  "runs_per_benchmark": 5,
+  "results": [
+    {
+      "language": "python",
+      "benchmark": "hello_world",
+      "description": "Minimal output benchmark",
+      "modes": {
+        "native": {
+          "runs": 5,
+          "successes": 5,
+          "success_rate_percent": 100.0,
+          "avg_ms": 73.93,
+          "median_ms": 73.72,
+          "p95_ms": 82.28,
+          "raw_ms": [
+            80.74,
+            61.31,
+            82.28,
+            71.59,
+            73.72
+          ],
+          "sample_output": "hello from cloud compiler\n",
+          "sample_error": ""
+        },
+        "cloud_sync": {
+          "runs": 5,
+          "successes": 5,
+          "success_rate_percent": 100.0,
+          "avg_ms": 878.94,
+          "median_ms": 866.76,
+          "p95_ms": 988.38,
+          "raw_ms": [
+            988.38,
+            903.0,
+            844.94,
+            791.63,
+            866.76
+          ],
+          "sample_output": "hello from cloud compiler\n",
+          "sample_error": ""
+        },
+        "cloud_async": {
+          "runs": 5,
+          "successes": 5,
+          "success_rate_percent": 100.0,
+          "avg_ms": 1830.82,
+          "median_ms": 1781.71,
+          "p95_ms": 2196.99,
+          "raw_ms": [
+            1637.49,
+            2196.99,
+            1744.16,
+            1781.71,
+            1793.75
+          ],
+          "sample_output": "hello from cloud compiler\n",
+          "sample_error": ""
+        }
+      }
+    },
+    {
+      "language": "python",
+      "benchmark": "cpu_loop",
+      "description": "CPU-bound arithmetic benchmark",
+      "modes": {
+        "native": {
+          "runs": 5,
+          "successes": 5,
+          "success_rate_percent": 100.0,
+          "avg_ms": 172.73,
+          "median_ms": 162.54,
+          "p95_ms": 231.0,
+          "raw_ms": [
+            231.0,
+            160.35,
+            132.23,
+            162.54,
+            177.54
+          ],
+          "sample_output": "19200137\n",
+          "sample_error": ""
+        },
+        "cloud_sync": {
+          "runs": 5,
+          "successes": 5,
+          "success_rate_percent": 100.0,
+          "avg_ms": 957.17,
+          "median_ms": 906.91,
+          "p95_ms": 1182.67,
+          "raw_ms": [
+            1182.67,
+            906.91,
+            940.06,
+            896.18,
+            860.04
+          ],
+          "sample_output": "19200137\n",
+          "sample_error": ""
+        },
+        "cloud_async": {
+          "runs": 5,
+          "successes": 5,
+          "success_rate_percent": 100.0,
+          "avg_ms": 1811.93,
+          "median_ms": 1875.97,
+          "p95_ms": 2451.89,
+          "raw_ms": [
+            1014.03,
+            1875.97,
+            1827.99,
+            2451.89,
+            1889.78
+          ],
+          "sample_output": "19200137\n",
+          "sample_error": ""
+        }
+      }
+    },
+    {
+      "language": "python",
+      "benchmark": "input_sort",
+      "description": "Input handling plus sorting benchmark",
+      "modes": {
+        "native": {
+          "runs": 5,
+          "successes": 5,
+          "success_rate_percent": 100.0,
+          "avg_ms": 120.77,
+          "median_ms": 97.18,
+          "p95_ms": 222.1,
+          "raw_ms": [
+            222.1,
+            101.23,
+            96.59,
+            97.18,
+            86.75
+          ],
+          "sample_output": "1 2 3 4 6 7 8 9\n",
+          "sample_error": ""
+        },
+        "cloud_sync": {
+          "runs": 5,
+          "successes": 5,
+          "success_rate_percent": 100.0,
+          "avg_ms": 868.94,
+          "median_ms": 855.2,
+          "p95_ms": 1066.68,
+          "raw_ms": [
+            750.5,
+            855.2,
+            915.05,
+            757.28,
+            1066.68
+          ],
+          "sample_output": "1 2 3 4 6 7 8 9\n",
+          "sample_error": ""
+        },
+        "cloud_async": {
+          "runs": 5,
+          "successes": 5,
+          "success_rate_percent": 100.0,
+          "avg_ms": 1777.58,
+          "median_ms": 1781.75,
+          "p95_ms": 2269.65,
+          "raw_ms": [
+            963.31,
+            2269.65,
+            2170.43,
+            1702.75,
+            1781.75
+          ],
+          "sample_output": "1 2 3 4 6 7 8 9\n",
+          "sample_error": ""
+        }
+      }
+    },
+    {
+      "language": "c",
+      "benchmark": "hello_world",
+      "description": "Minimal output benchmark",
+      "modes": {
+        "native": {
+          "runs": 5,
+          "successes": 5,
+          "success_rate_percent": 100.0,
+          "avg_ms": 622.54,
+          "median_ms": 503.97,
+          "p95_ms": 866.23,
+          "raw_ms": [
+            866.23,
+            503.97,
+            486.49,
+            461.58,
+            794.42
+          ],
+          "sample_output": "hello from cloud compiler\n",
+          "sample_error": ""
+        },
+        "cloud_sync": {
+          "runs": 5,
+          "successes": 5,
+          "success_rate_percent": 100.0,
+          "avg_ms": 1088.8,
+          "median_ms": 1093.96,
+          "p95_ms": 1269.62,
+          "raw_ms": [
+            1047.67,
+            1269.62,
+            1093.96,
+            1126.63,
+            906.15
+          ],
+          "sample_output": "hello from cloud compiler\n",
+          "sample_error": ""
+        },
+        "cloud_async": {
+          "runs": 5,
+          "successes": 5,
+          "success_rate_percent": 100.0,
+          "avg_ms": 1743.98,
+          "median_ms": 1906.6,
+          "p95_ms": 2315.41,
+          "raw_ms": [
+            795.74,
+            1639.54,
+            2315.41,
+            1906.6,
+            2062.6
+          ],
+          "sample_output": "hello from cloud compiler\n",
+          "sample_error": ""
+        }
+      }
+    },
+    {
+      "language": "c",
+      "benchmark": "cpu_loop",
+      "description": "CPU-bound arithmetic benchmark",
+      "modes": {
+        "native": {
+          "runs": 5,
+          "successes": 5,
+          "success_rate_percent": 100.0,
+          "avg_ms": 968.89,
+          "median_ms": 958.25,
+          "p95_ms": 1150.5,
+          "raw_ms": [
+            1150.5,
+            958.25,
+            1025.57,
+            924.57,
+            785.54
+          ],
+          "sample_output": "19200137\n",
+          "sample_error": ""
+        },
+        "cloud_sync": {
+          "runs": 5,
+          "successes": 5,
+          "success_rate_percent": 100.0,
+          "avg_ms": 1030.29,
+          "median_ms": 972.31,
+          "p95_ms": 1294.04,
+          "raw_ms": [
+            1294.04,
+            972.31,
+            1139.92,
+            884.41,
+            860.77
+          ],
+          "sample_output": "19200137\n",
+          "sample_error": ""
+        },
+        "cloud_async": {
+          "runs": 5,
+          "successes": 5,
+          "success_rate_percent": 100.0,
+          "avg_ms": 1691.77,
+          "median_ms": 1865.1,
+          "p95_ms": 1925.38,
+          "raw_ms": [
+            1031.35,
+            1865.1,
+            1898.25,
+            1738.78,
+            1925.38
+          ],
+          "sample_output": "19200137\n",
+          "sample_error": ""
+        }
+      }
+    },
+    {
+      "language": "c",
+      "benchmark": "input_sort",
+      "description": "Input handling plus sorting benchmark",
+      "modes": {
+        "native": {
+          "runs": 5,
+          "successes": 5,
+          "success_rate_percent": 100.0,
+          "avg_ms": 502.4,
+          "median_ms": 458.01,
+          "p95_ms": 723.83,
+          "raw_ms": [
+            723.83,
+            463.33,
+            444.57,
+            422.25,
+            458.01
+          ],
+          "sample_output": "1 2 3 4 6 7 8 9\n",
+          "sample_error": ""
+        },
+        "cloud_sync": {
+          "runs": 5,
+          "successes": 5,
+          "success_rate_percent": 100.0,
+          "avg_ms": 947.11,
+          "median_ms": 810.33,
+          "p95_ms": 1221.43,
+          "raw_ms": [
+            787.66,
+            780.54,
+            1221.43,
+            810.33,
+            1135.58
+          ],
+          "sample_output": "1 2 3 4 6 7 8 9\n",
+          "sample_error": ""
+        },
+        "cloud_async": {
+          "runs": 5,
+          "successes": 5,
+          "success_rate_percent": 100.0,
+          "avg_ms": 1617.01,
+          "median_ms": 1820.03,
+          "p95_ms": 1839.44,
+          "raw_ms": [
+            805.09,
+            1781.23,
+            1839.44,
+            1839.24,
+            1820.03
+          ],
+          "sample_output": "1 2 3 4 6 7 8 9\n",
+          "sample_error": ""
+        }
+      }
+    },
+    {
+      "language": "cpp",
+      "benchmark": "hello_world",
+      "description": "Minimal output benchmark",
+      "modes": {
+        "native": {
+          "runs": 5,
+          "successes": 5,
+          "success_rate_percent": 100.0,
+          "avg_ms": 898.14,
+          "median_ms": 815.25,
+          "p95_ms": 1242.99,
+          "raw_ms": [
+            737.08,
+            1242.99,
+            800.72,
+            815.25,
+            894.64
+          ],
+          "sample_output": "hello from cloud compiler\n",
+          "sample_error": ""
+        },
+        "cloud_sync": {
+          "runs": 5,
+          "successes": 5,
+          "success_rate_percent": 100.0,
+          "avg_ms": 1332.32,
+          "median_ms": 1348.64,
+          "p95_ms": 1378.27,
+          "raw_ms": [
+            1348.64,
+            1271.72,
+            1378.27,
+            1373.53,
+            1289.45
+          ],
+          "sample_output": "hello from cloud compiler\n",
+          "sample_error": ""
+        },
+        "cloud_async": {
+          "runs": 5,
+          "successes": 5,
+          "success_rate_percent": 100.0,
+          "avg_ms": 2807.41,
+          "median_ms": 2761.88,
+          "p95_ms": 3064.96,
+          "raw_ms": [
+            2941.54,
+            2576.58,
+            2692.09,
+            2761.88,
+            3064.96
+          ],
+          "sample_output": "hello from cloud compiler\n",
+          "sample_error": ""
+        }
+      }
+    },
+    {
+      "language": "cpp",
+      "benchmark": "cpu_loop",
+      "description": "CPU-bound arithmetic benchmark",
+      "modes": {
+        "native": {
+          "runs": 5,
+          "successes": 5,
+          "success_rate_percent": 100.0,
+          "avg_ms": 723.31,
+          "median_ms": 690.36,
+          "p95_ms": 816.61,
+          "raw_ms": [
+            816.61,
+            661.2,
+            690.36,
+            777.78,
+            670.61
+          ],
+          "sample_output": "19200137\n",
+          "sample_error": ""
+        },
+        "cloud_sync": {
+          "runs": 5,
+          "successes": 5,
+          "success_rate_percent": 100.0,
+          "avg_ms": 1539.54,
+          "median_ms": 1599.2,
+          "p95_ms": 1880.66,
+          "raw_ms": [
+            1601.17,
+            1880.66,
+            1166.62,
+            1599.2,
+            1450.06
+          ],
+          "sample_output": "19200137\n",
+          "sample_error": ""
+        },
+        "cloud_async": {
+          "runs": 5,
+          "successes": 5,
+          "success_rate_percent": 100.0,
+          "avg_ms": 2843.13,
+          "median_ms": 2834.18,
+          "p95_ms": 3517.97,
+          "raw_ms": [
+            2126.8,
+            2637.5,
+            2834.18,
+            3099.17,
+            3517.97
+          ],
+          "sample_output": "19200137\n",
+          "sample_error": ""
+        }
+      }
+    },
+    {
+      "language": "cpp",
+      "benchmark": "input_sort",
+      "description": "Input handling plus sorting benchmark",
+      "modes": {
+        "native": {
+          "runs": 5,
+          "successes": 5,
+          "success_rate_percent": 100.0,
+          "avg_ms": 2020.06,
+          "median_ms": 2139.38,
+          "p95_ms": 2216.96,
+          "raw_ms": [
+            2130.87,
+            1467.33,
+            2216.96,
+            2139.38,
+            2145.78
+          ],
+          "sample_output": "1 2 3 4 6 7 8 9\n",
+          "sample_error": ""
+        },
+        "cloud_sync": {
+          "runs": 5,
+          "successes": 5,
+          "success_rate_percent": 100.0,
+          "avg_ms": 1791.24,
+          "median_ms": 1505.52,
+          "p95_ms": 2536.92,
+          "raw_ms": [
+            2536.92,
+            1963.13,
+            1505.52,
+            1496.28,
+            1454.34
+          ],
+          "sample_output": "1 2 3 4 6 7 8 9\n",
+          "sample_error": ""
+        },
+        "cloud_async": {
+          "runs": 5,
+          "successes": 5,
+          "success_rate_percent": 100.0,
+          "avg_ms": 3189.06,
+          "median_ms": 3217.54,
+          "p95_ms": 3809.23,
+          "raw_ms": [
+            2482.07,
+            3293.0,
+            3809.23,
+            3143.45,
+            3217.54
+          ],
+          "sample_output": "1 2 3 4 6 7 8 9\n",
+          "sample_error": ""
+        }
+      }
+    }
+  ]
+}

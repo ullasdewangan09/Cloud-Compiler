@@ -9,8 +9,10 @@ from auth_routes import router as auth_router
 from database import engine
 from dependencies import require_admin
 from execution_routes import router as execution_router
+from interactive_sessions import shutdown_interactive_sessions
 from metrics_routes import router as metrics_router
 from models import Base
+from project_routes import router as project_router
 from visualization_routes import router as visualization_router
 
 
@@ -19,7 +21,10 @@ async def lifespan(app: FastAPI):
     # Start autoscaler when app starts.
     thread = threading.Thread(target=autoscaler_loop, daemon=True)
     thread.start()
-    yield
+    try:
+        yield
+    finally:
+        shutdown_interactive_sessions()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -39,6 +44,7 @@ Base.metadata.create_all(bind=engine)
 # ✅ Include routers
 app.include_router(auth_router)
 app.include_router(execution_router)
+app.include_router(project_router)
 
 @app.get("/")
 def root():

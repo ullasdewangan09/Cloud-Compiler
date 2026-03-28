@@ -1,8 +1,14 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { useNavigate, Link } from 'react-router';
 import { useAuth } from '../../context/AuthContext';
-import { LogIn, Loader2, AlertCircle, UserRound, LockKeyhole, Eye, EyeOff, Sparkles } from 'lucide-react';
+import { LogIn, Loader2, AlertCircle, UserRound, LockKeyhole, Eye, EyeOff, Cuboid } from 'lucide-react';
 import { isAxiosError } from 'axios';
+
+const LoginLoadingScreen = lazy(() =>
+  import('../components/LoginLoadingScreen').then((module) => ({
+    default: module.LoginLoadingScreen,
+  }))
+);
 
 export function Login() {
   const [username, setUsername] = useState('');
@@ -10,6 +16,7 @@ export function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showLoadingScreen, setShowLoadingScreen] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -20,7 +27,7 @@ export function Login() {
 
     try {
       await login(username, password);
-      navigate('/workspace');
+      setShowLoadingScreen(true);
     } catch (err: unknown) {
       const detail = isAxiosError<{ detail?: string }>(err) ? err.response?.data?.detail : undefined;
       setError(detail || 'Login failed. Please check your credentials.');
@@ -28,6 +35,14 @@ export function Login() {
       setLoading(false);
     }
   };
+
+  if (showLoadingScreen) {
+    return (
+      <Suspense fallback={<div className="login-loading-screen login-loading-screen-fallback" />}>
+        <LoginLoadingScreen onComplete={() => navigate('/workspace')} />
+      </Suspense>
+    );
+  }
 
   return (
     <div className="auth-ref-page">
@@ -60,8 +75,8 @@ export function Login() {
         <div className="auth-ref-panel-wrap">
           <div className="auth-ref-panel">
             <div className="auth-ref-brand">
-              <Sparkles className="w-4 h-4" />
-              <span>Cloud Compiler Studio</span>
+              <Cuboid className="w-4 h-4" />
+              <span>VeloQube | Cloud Compiler</span>
             </div>
 
             <h1 className="auth-ref-title">Log in</h1>

@@ -10,6 +10,8 @@ Cloud Compiler is a full-stack coding platform where users can write code in the
 - Metrics and visualization endpoints (admin-protected)
 - File import/export and PDF export
 - Basic auth with JWT
+- Multi-file projects, shareable project links, compiler profiles, and execution flags
+- Project comparison report: `reporting/Compiler_Platform_Comparison_Report.docx`
 
 ## Architecture
 
@@ -24,6 +26,11 @@ Cloud Compiler is a full-stack coding platform where users can write code in the
 - C
 - C++
 - Java
+
+Java Swing apps support two browser-friendly modes:
+
+- Preview mode for normal sync/async runs
+- Interactive mode through a local noVNC session for live clicking and typing
 
 ## Project structure
 
@@ -160,6 +167,11 @@ Frontend runs at `http://localhost:5173`.
 - `POST /execute/sync`
 - `POST /import-file`
 - `POST /export-file`
+- `GET /projects`
+- `POST /projects/save`
+- `PUT /projects/{project_id}`
+- `POST /projects/{project_id}/share`
+- `GET /projects/shared/{share_id}`
 
 ### Admin-protected
 
@@ -176,6 +188,8 @@ Frontend runs at `http://localhost:5173`.
 - Network is disabled for execution containers
 - Memory and CPU limits are applied
 - Execution timeout is enforced
+- Swing previews and interactive sessions use a virtual X display inside the Java runner container
+- Interactive Swing sessions publish a local-only noVNC port on `127.0.0.1`
 
 ## Notes
 

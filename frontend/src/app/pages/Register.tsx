@@ -11,7 +11,7 @@ import {
   LockKeyhole,
   Eye,
   EyeOff,
-  Sparkles,
+  Cuboid,
 } from 'lucide-react';
 
 export function Register() {
@@ -79,8 +79,8 @@ export function Register() {
         <div className="auth-ref-panel-wrap">
           <div className="auth-ref-panel">
             <div className="auth-ref-brand">
-              <Sparkles className="w-4 h-4" />
-              <span>Cloud Compiler Studio</span>
+              <Cuboid className="w-4 h-4" />
+              <span>VeloQube | Cloud Compiler</span>
             </div>
 
             <h1 className="auth-ref-title">Create account</h1>

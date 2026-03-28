@@ -1,16 +1,31 @@
-import { useState, useEffect } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
+import { AlertCircle, BarChart3, Clock, Cpu, Database, Loader2, TimerReset } from 'lucide-react';
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
+
 import { GlassCard } from '../components/GlassCard';
-import { Activity, Cpu, Database, Clock, Loader2, AlertCircle, TrendingUp } from 'lucide-react';
 import { apiService } from '../../services/api';
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface QueueMetrics {
   queue_length: number;
+  average_queue_wait_ms: number;
+  max_queue_wait_ms: number;
+  recent_queue_wait: Array<{ job_id: string; queue_wait_ms: number }>;
 }
 
 interface WorkerMetrics {
   active_workers: number;
-  workers: Record<string, { status: string; current_job: string | null }>;
+  running_jobs: number;
+  workers: Record<string, { status: string; current_job: string | null; updated_at: number }>;
 }
 
 interface SystemMetrics {
@@ -21,6 +36,19 @@ interface SystemMetrics {
 interface JobMetrics {
   completed_jobs: number;
   failed_jobs: number;
+  success_rate_percent: number;
+  average_total_time_ms: number;
+  average_compile_time_ms: number;
+  average_execution_time_ms: number;
+  status_counts: Record<string, number>;
+  latency_trend: Array<{
+    job_id: string;
+    language: string;
+    status: string;
+    total_time_ms: number;
+    queue_wait_ms: number;
+    execution_time_ms: number;
+  }>;
 }
 
 export function Metrics() {
@@ -32,8 +60,8 @@ export function Metrics() {
   const [jobMetrics, setJobMetrics] = useState<JobMetrics | null>(null);
 
   useEffect(() => {
-    loadMetrics();
-    const interval = setInterval(loadMetrics, 5000); // Refresh every 5 seconds
+    void loadMetrics();
+    const interval = setInterval(() => void loadMetrics(), 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -91,187 +119,133 @@ export function Metrics() {
 
   const queueLength = queueMetrics?.queue_length ?? 0;
   const workerCount = workerMetrics?.active_workers ?? 0;
+  const runningJobs = workerMetrics?.running_jobs ?? 0;
   const totalJobs = (jobMetrics?.completed_jobs ?? 0) + (jobMetrics?.failed_jobs ?? 0);
-  const successJobs = jobMetrics?.completed_jobs ?? 0;
-  const failedJobs = jobMetrics?.failed_jobs ?? 0;
-  const successRate = totalJobs > 0 ? Math.round((successJobs / totalJobs) * 100) : 0;
-
-  const statusDistributionData = [
-    { status: 'Completed', count: successJobs },
-    { status: 'Failed', count: failedJobs },
-  ];
-
-  const executionTimeTrendData = [
-    { time: 'CPU', ms: Math.round(systemMetrics?.cpu_usage_percent ?? 0) },
-    { time: 'Memory', ms: Math.round(systemMetrics?.memory_usage_percent ?? 0) },
-  ];
+  const statusDistributionData = Object.entries(jobMetrics?.status_counts || {}).map(([status, count]) => ({
+    status,
+    count,
+  }));
+  const latencyTrendData = (jobMetrics?.latency_trend || []).map((item, index) => ({
+    label: item.job_id?.slice(0, 6) || `job-${index + 1}`,
+    total: Math.round(item.total_time_ms || 0),
+    queue: Math.round(item.queue_wait_ms || 0),
+    execution: Math.round(item.execution_time_ms || 0),
+  }));
 
   return (
     <div className="min-h-screen p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-text mb-2">System Metrics</h1>
-          <p className="text-text-secondary">Real-time monitoring and performance analytics</p>
+          <h1 className="text-3xl font-bold text-text mb-2">Execution Metrics</h1>
+          <p className="text-text-secondary">Queue telemetry, latency breakdowns, and job outcome trends</p>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-4 gap-6 mb-6">
-          <GlassCard hover>
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-text-tertiary text-sm mb-1">Queue Depth</p>
-                <p className="text-3xl font-bold text-text">
-                  {queueLength}
-                </p>
-                <p className="text-xs text-text-secondary mt-1">
-                  queued jobs
-                </p>
-              </div>
-              <div className="p-3 bg-sky/20 rounded-xl">
-                <Database className="w-6 h-6 text-sky-deep" />
-              </div>
-            </div>
-          </GlassCard>
-
-          <GlassCard hover>
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-text-tertiary text-sm mb-1">Active Workers</p>
-                <p className="text-3xl font-bold text-text">
-                  {workerCount}
-                </p>
-                <p className="text-xs text-text-secondary mt-1">
-                  registered workers
-                </p>
-              </div>
-              <div className="p-3 bg-mint/20 rounded-xl">
-                <Cpu className="w-6 h-6 text-mint-deep" />
-              </div>
-            </div>
-          </GlassCard>
-
-          <GlassCard hover>
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-text-tertiary text-sm mb-1">Total Jobs</p>
-                <p className="text-3xl font-bold text-text">
-                  {totalJobs}
-                </p>
-                <p className="text-xs text-text-secondary mt-1">
-                  {successJobs} completed
-                </p>
-              </div>
-              <div className="p-3 bg-lavender/20 rounded-xl">
-                <Activity className="w-6 h-6 text-lavender-deep" />
-              </div>
-            </div>
-          </GlassCard>
-
-          <GlassCard hover>
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-text-tertiary text-sm mb-1">Avg Exec Time</p>
-                <p className="text-3xl font-bold text-text">
-                  {successRate}
-                  <span className="text-lg">%</span>
-                </p>
-                <p className="text-xs text-text-secondary mt-1">success rate</p>
-              </div>
-              <div className="p-3 bg-peach/20 rounded-xl">
-                <Clock className="w-6 h-6 text-peach-deep" />
-              </div>
-            </div>
-          </GlassCard>
+        <div className="grid grid-cols-5 gap-6 mb-6">
+          <MetricCard icon={<Database className="w-6 h-6 text-sky-deep" />} title="Queue Depth" value={queueLength} sublabel="queued jobs" />
+          <MetricCard icon={<Cpu className="w-6 h-6 text-mint-deep" />} title="Active Workers" value={workerCount} sublabel={`${runningJobs} running jobs`} />
+          <MetricCard icon={<Clock className="w-6 h-6 text-peach-deep" />} title="Avg Queue Wait" value={`${queueMetrics?.average_queue_wait_ms ?? 0} ms`} sublabel={`max ${queueMetrics?.max_queue_wait_ms ?? 0} ms`} />
+          <MetricCard icon={<TimerReset className="w-6 h-6 text-lavender-deep" />} title="Avg Total Time" value={`${jobMetrics?.average_total_time_ms ?? 0} ms`} sublabel={`execution ${jobMetrics?.average_execution_time_ms ?? 0} ms`} />
+          <MetricCard icon={<BarChart3 className="w-6 h-6 text-sky-deep" />} title="Success Rate" value={`${jobMetrics?.success_rate_percent ?? 0}%`} sublabel={`${totalJobs} recent jobs`} />
         </div>
 
-        {/* Charts Grid */}
         <div className="grid grid-cols-2 gap-6 mb-6">
-          {/* Job Status Distribution */}
           <GlassCard>
-            <h3 className="text-lg font-semibold text-text mb-4 flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-primary" />
-              Job Status Distribution
-            </h3>
-            <div className="h-64">
+            <h3 className="text-lg font-semibold text-text mb-4">Job Status Breakdown</h3>
+            <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={statusDistributionData}
-                >
+                <BarChart data={statusDistributionData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--divider)" />
                   <XAxis dataKey="status" stroke="var(--text-secondary)" />
                   <YAxis stroke="var(--text-secondary)" />
-                  <Tooltip
-                    contentStyle={{
-                      background: 'var(--surface-solid)',
-                      border: '1px solid var(--glass-border)',
-                      borderRadius: '12px',
-                    }}
-                  />
+                  <Tooltip />
                   <Bar dataKey="count" fill="var(--sky)" radius={[8, 8, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </GlassCard>
 
-          {/* Execution Time Trend */}
           <GlassCard>
-            <h3 className="text-lg font-semibold text-text mb-4 flex items-center gap-2">
-              <Clock className="w-5 h-5 text-accent" />
-              Execution Time Trend
-            </h3>
-            <div className="h-64">
+            <h3 className="text-lg font-semibold text-text mb-4">Queue Wait Trend</h3>
+            <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={executionTimeTrendData}
-                >
+                <LineChart data={(queueMetrics?.recent_queue_wait || []).map((item, index) => ({
+                  label: item.job_id?.slice(0, 6) || `q-${index + 1}`,
+                  wait: Math.round(item.queue_wait_ms || 0),
+                }))}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--divider)" />
-                  <XAxis dataKey="time" stroke="var(--text-secondary)" />
+                  <XAxis dataKey="label" stroke="var(--text-secondary)" />
                   <YAxis stroke="var(--text-secondary)" />
-                  <Tooltip
-                    contentStyle={{
-                      background: 'var(--surface-solid)',
-                      border: '1px solid var(--glass-border)',
-                      borderRadius: '12px',
-                    }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="ms"
-                    stroke="var(--mint)"
-                    strokeWidth={2}
-                    dot={{ fill: 'var(--mint-deep)', r: 4 }}
-                  />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="wait" stroke="var(--mint)" strokeWidth={2} dot={{ fill: 'var(--mint-deep)', r: 4 }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
           </GlassCard>
         </div>
 
-        {/* System Info */}
-        <GlassCard>
-          <h3 className="text-lg font-semibold text-text mb-4">System Information</h3>
-          <div className="grid grid-cols-3 gap-6">
-            <div>
-              <p className="text-sm text-text-tertiary mb-1">CPU Usage</p>
-              <p className="text-2xl font-bold text-text">
-                {systemMetrics?.cpu_usage_percent ?? 0}%
-              </p>
+        <div className="grid grid-cols-2 gap-6 mb-6">
+          <GlassCard>
+            <h3 className="text-lg font-semibold text-text mb-4">Latency Breakdown</h3>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={latencyTrendData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--divider)" />
+                  <XAxis dataKey="label" stroke="var(--text-secondary)" />
+                  <YAxis stroke="var(--text-secondary)" />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="total" stroke="var(--sky)" strokeWidth={2} />
+                  <Line type="monotone" dataKey="queue" stroke="var(--peach)" strokeWidth={2} />
+                  <Line type="monotone" dataKey="execution" stroke="var(--mint)" strokeWidth={2} />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
-            <div>
-              <p className="text-sm text-text-tertiary mb-1">Memory Usage</p>
-              <p className="text-2xl font-bold text-text">
-                {systemMetrics?.memory_usage_percent ?? 0}%
-              </p>
+          </GlassCard>
+
+          <GlassCard>
+            <h3 className="text-lg font-semibold text-text mb-4">System Load</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <LoadCard label="CPU Usage" value={`${systemMetrics?.cpu_usage_percent ?? 0}%`} />
+              <LoadCard label="Memory Usage" value={`${systemMetrics?.memory_usage_percent ?? 0}%`} />
+              <LoadCard label="Compile Avg" value={`${jobMetrics?.average_compile_time_ms ?? 0} ms`} />
+              <LoadCard label="Execution Avg" value={`${jobMetrics?.average_execution_time_ms ?? 0} ms`} />
             </div>
-            <div>
-              <p className="text-sm text-text-tertiary mb-1">Queue Length</p>
-              <p className="text-2xl font-bold text-text">
-                {queueLength}
-              </p>
-            </div>
-          </div>
-        </GlassCard>
+          </GlassCard>
+        </div>
       </div>
+    </div>
+  );
+}
+
+function MetricCard({
+  icon,
+  title,
+  value,
+  sublabel,
+}: {
+  icon: ReactNode;
+  title: string;
+  value: string | number;
+  sublabel: string;
+}) {
+  return (
+    <GlassCard hover>
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-text-tertiary text-sm mb-1">{title}</p>
+          <p className="text-3xl font-bold text-text">{value}</p>
+          <p className="text-xs text-text-secondary mt-1">{sublabel}</p>
+        </div>
+        <div className="p-3 bg-sky/20 rounded-xl">{icon}</div>
+      </div>
+    </GlassCard>
+  );
+}
+
+function LoadCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-divider-subtle bg-surface-solid p-4">
+      <p className="text-xs uppercase tracking-wide text-text-tertiary mb-1">{label}</p>
+      <p className="text-2xl font-bold text-text">{value}</p>
     </div>
   );
 }

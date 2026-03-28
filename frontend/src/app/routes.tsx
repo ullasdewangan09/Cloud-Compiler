@@ -4,6 +4,7 @@ import { Register } from './pages/Register';
 import { Workspace } from './pages/Workspace';
 import { Metrics } from './pages/Metrics';
 import { Dashboard } from './pages/Dashboard';
+import { SharedProject } from './pages/SharedProject';
 import { Layout } from './Layout';
 import { ProtectedRoute } from './ProtectedRoute';
 
@@ -23,6 +24,10 @@ export const router = createBrowserRouter([
       {
         path: 'register',
         element: <Register />,
+      },
+      {
+        path: 'shared/:shareId',
+        element: <SharedProject />,
       },
       {
         path: 'workspace',

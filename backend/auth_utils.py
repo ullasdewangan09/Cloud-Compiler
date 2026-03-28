@@ -1,11 +1,12 @@
 import hashlib
+import os
 import bcrypt
 from jose import jwt
 from datetime import datetime, timedelta
 
-SECRET_KEY = "supersecretkey"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+SECRET_KEY = os.getenv("SECRET_KEY", "supersecretkey")
+ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
 
 # Pre-hash with SHA-256 so bcrypt input stays under the 72-byte limit.
 def hash_password(password: str):

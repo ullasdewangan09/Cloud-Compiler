@@ -1,4 +1,4 @@
-import { Code2, LogOut, Sun, Moon, User, BarChart3 } from 'lucide-react';
+import { Cuboid, LogOut, Sun, Moon, User, BarChart3 } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router';
 import { useAuth } from '../../context/AuthContext';
 import { useState } from 'react';
@@ -35,10 +35,10 @@ export function Navbar() {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2.5 group">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky to-sky-deep flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Code2 className="w-5 h-5 text-white" strokeWidth={2.5} />
+              <Cuboid className="w-5 h-5 text-white" strokeWidth={2.5} />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-text">Cloud Compiler Studio</h1>
+              <h1 className="text-lg font-bold text-text">VeloQube | Cloud Compiler</h1>
               <p className="text-xs text-text-tertiary">Distributed Execution Platform</p>
             </div>
           </Link>

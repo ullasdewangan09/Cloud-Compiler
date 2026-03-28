@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
+import { Activity, AlertCircle, Database, Loader2, Server, TimerReset } from 'lucide-react';
+
 import { GlassCard } from '../components/GlassCard';
-import { Loader2, AlertCircle, Activity, Server, Database, Cpu } from 'lucide-react';
 import { apiService } from '../../services/api';
 
 interface DashboardData {
@@ -10,22 +11,33 @@ interface DashboardData {
     running_jobs: number;
     completed_jobs: number;
     failed_jobs: number;
+    success_rate_percent: number;
+    average_total_time_ms: number;
   };
   queue_metrics: {
     queue_length: number;
+    average_queue_wait_ms: number;
   };
   worker_metrics: {
     active_workers: number;
-    workers: Record<string, { status: string; current_job: string | null }>;
+    running_jobs: number;
+    workers: Record<string, { status: string; current_job: string | null; updated_at: number }>;
   };
   system_metrics: {
     cpu_usage_percent: number;
     memory_usage_percent: number;
   };
+  job_metrics: {
+    average_compile_time_ms: number;
+    average_execution_time_ms: number;
+  };
   recent_executions: Array<{
     user: string;
     language: string;
     status: string;
+    total_time_ms?: number;
+    queue_wait_ms?: number;
+    error?: string;
   }>;
 }
 
@@ -35,8 +47,8 @@ export function Dashboard() {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
 
   useEffect(() => {
-    loadDashboard();
-    const interval = setInterval(loadDashboard, 3000);
+    void loadDashboard();
+    const interval = setInterval(() => void loadDashboard(), 3000);
     return () => clearInterval(interval);
   }, []);
 
@@ -87,142 +99,86 @@ export function Dashboard() {
   const queueMetrics = dashboardData?.queue_metrics;
   const workerMetrics = dashboardData?.worker_metrics;
   const systemMetrics = dashboardData?.system_metrics;
+  const jobMetrics = dashboardData?.job_metrics;
   const recentExecutions = dashboardData?.recent_executions || [];
-
-  const workers = workerMetrics?.workers || {};
-  const workerList = Object.entries(workers);
 
   return (
     <div className="min-h-screen p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-text mb-2">System Visualization</h1>
-          <p className="text-text-secondary">
-            Real-time distributed architecture and execution flow
-          </p>
+          <h1 className="text-3xl font-bold text-text mb-2">Execution Dashboard</h1>
+          <p className="text-text-secondary">Realtime view of queueing, workers, and recent execution outcomes</p>
         </div>
 
-        <GlassCard className="mb-6">
-          <h3 className="text-lg font-semibold text-text mb-6 flex items-center gap-2">
-            <Activity className="w-5 h-5 text-primary" />
-            Distributed System Architecture
-          </h3>
+        <div className="grid grid-cols-4 gap-6 mb-6">
+          <SnapshotCard title="Queue" value={`${queueMetrics?.queue_length ?? 0}`} subtitle={`${queueMetrics?.average_queue_wait_ms ?? 0} ms avg wait`} icon={<Database className="w-5 h-5 text-sky-deep" />} />
+          <SnapshotCard title="Workers" value={`${workerMetrics?.active_workers ?? 0}`} subtitle={`${workerMetrics?.running_jobs ?? 0} running`} icon={<Server className="w-5 h-5 text-mint-deep" />} />
+          <SnapshotCard title="Success Rate" value={`${systemState?.success_rate_percent ?? 0}%`} subtitle={`${systemState?.completed_jobs ?? 0} successes`} icon={<Activity className="w-5 h-5 text-lavender-deep" />} />
+          <SnapshotCard title="Avg Total Time" value={`${systemState?.average_total_time_ms ?? 0} ms`} subtitle={`${jobMetrics?.average_execution_time_ms ?? 0} ms execution`} icon={<TimerReset className="w-5 h-5 text-peach-deep" />} />
+        </div>
 
-          <div className="grid grid-cols-3 gap-6 mb-8">
-            <div className="p-4 rounded-xl border-2 bg-primary/10 border-primary shadow-lg">
-              <div className="flex items-center gap-3 mb-2">
-                <Server className="w-5 h-5 text-sky" />
-                <div>
-                  <h4 className="font-semibold text-text">API Service</h4>
-                  <p className="text-xs text-text-tertiary">FastAPI</p>
-                </div>
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs text-text-secondary">
-                  CPU: {systemMetrics?.cpu_usage_percent ?? 0}%
-                </p>
-                <p className="text-xs text-text-secondary">
-                  Memory: {systemMetrics?.memory_usage_percent ?? 0}%
-                </p>
-              </div>
+        <div className="grid grid-cols-3 gap-6 mb-6">
+          <GlassCard>
+            <h3 className="text-lg font-semibold text-text mb-4">Platform Health</h3>
+            <div className="space-y-3">
+              <HealthRow label="CPU usage" value={`${systemMetrics?.cpu_usage_percent ?? 0}%`} />
+              <HealthRow label="Memory usage" value={`${systemMetrics?.memory_usage_percent ?? 0}%`} />
+              <HealthRow label="Compile average" value={`${jobMetrics?.average_compile_time_ms ?? 0} ms`} />
+              <HealthRow label="Execution average" value={`${jobMetrics?.average_execution_time_ms ?? 0} ms`} />
             </div>
+          </GlassCard>
 
-            <div className="p-4 rounded-xl border-2 bg-primary/10 border-primary shadow-lg">
-              <div className="flex items-center gap-3 mb-2">
-                <Database className="w-5 h-5 text-mint" />
-                <div>
-                  <h4 className="font-semibold text-text">Redis Queue</h4>
-                  <p className="text-xs text-text-tertiary">Job Buffer</p>
-                </div>
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs text-text-secondary">
-                  Queue Length: {queueMetrics?.queue_length ?? 0}
-                </p>
-                <p className="text-xs text-text-secondary">
-                  Running Jobs: {systemState?.running_jobs ?? 0}
-                </p>
-              </div>
-            </div>
-
-            <div className="p-4 rounded-xl border-2 bg-primary/10 border-primary shadow-lg">
-              <div className="flex items-center gap-3 mb-2">
-                <Cpu className="w-5 h-5 text-lavender" />
-                <div>
-                  <h4 className="font-semibold text-text">Workers</h4>
-                  <p className="text-xs text-text-tertiary">Executor Pool</p>
-                </div>
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs text-text-secondary">
-                  Active: {workerMetrics?.active_workers ?? 0}
-                </p>
-                <p className="text-xs text-text-secondary">
-                  Registered: {workerList.length}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t border-divider pt-6">
-            <h4 className="text-sm font-semibold text-text mb-3">Worker Status</h4>
+          <GlassCard className="col-span-2">
+            <h3 className="text-lg font-semibold text-text mb-4">Worker Pool</h3>
             <div className="space-y-2">
-              {workerList.length === 0 && (
+              {Object.entries(workerMetrics?.workers || {}).length === 0 ? (
                 <div className="p-3 bg-surface-solid rounded-lg text-sm text-text-secondary">
                   No workers registered yet.
                 </div>
+              ) : (
+                Object.entries(workerMetrics?.workers || {}).map(([workerId, worker]) => (
+                  <div key={workerId} className="flex items-center gap-3 p-3 bg-surface-solid rounded-lg">
+                    <div className={`w-2.5 h-2.5 rounded-full ${worker.status === 'running' ? 'bg-status-warning animate-pulse' : 'bg-status-success'}`} />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-text truncate">{workerId}</p>
+                      <p className="text-xs text-text-tertiary">{worker.current_job || 'idle'}</p>
+                    </div>
+                    <span className="ml-auto text-xs uppercase tracking-wide text-text-tertiary">{worker.status}</span>
+                  </div>
+                ))
               )}
-              {workerList.map(([workerId, worker], idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center gap-3 p-3 bg-surface-solid rounded-lg"
-                >
-                  <div
-                    className={`w-2 h-2 rounded-full ${
-                      worker.status === 'running' ? 'bg-primary animate-pulse' : 'bg-divider'
-                    }`}
-                  />
-                  <span className="text-sm text-text">{workerId}</span>
-                  <span className="ml-auto text-xs text-text-tertiary">{worker.status}</span>
-                </div>
-              ))}
             </div>
-          </div>
-        </GlassCard>
+          </GlassCard>
+        </div>
 
         <GlassCard>
-          <h3 className="text-lg font-semibold text-text mb-4 flex items-center gap-2">
-            <Activity className="w-5 h-5 text-accent" />
-            Recent Executions
-          </h3>
+          <h3 className="text-lg font-semibold text-text mb-4">Recent Executions</h3>
           {recentExecutions.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-text-secondary">No recent executions yet</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {recentExecutions.map((job, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between p-4 bg-surface-solid rounded-xl"
-                >
+              {recentExecutions.map((job, index) => (
+                <div key={`${job.user}-${index}`} className="flex items-center justify-between rounded-xl bg-surface-solid p-4">
                   <div className="flex items-center gap-4">
                     <div
                       className={`w-3 h-3 rounded-full ${
-                        job.status === 'submitted'
-                          ? 'bg-status-warning'
-                          : job.status === 'success'
-                            ? 'bg-status-success'
+                        job.status === 'success'
+                          ? 'bg-status-success'
+                          : job.status === 'running'
+                            ? 'bg-status-warning'
                             : 'bg-status-error'
                       }`}
                     />
                     <div>
                       <p className="font-medium text-text">{job.user}</p>
-                      <p className="text-xs text-text-tertiary">{job.language}</p>
+                      <p className="text-xs text-text-tertiary">{job.language} · {job.status}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm text-text">{job.status}</p>
+                  <div className="text-right text-xs text-text-tertiary">
+                    <p>{job.total_time_ms != null ? `${job.total_time_ms} ms total` : 'pending'}</p>
+                    <p>{job.queue_wait_ms != null ? `${job.queue_wait_ms} ms queue` : job.error || ''}</p>
                   </div>
                 </div>
               ))}
@@ -230,6 +186,40 @@ export function Dashboard() {
           )}
         </GlassCard>
       </div>
+    </div>
+  );
+}
+
+function SnapshotCard({
+  title,
+  value,
+  subtitle,
+  icon,
+}: {
+  title: string;
+  value: string;
+  subtitle: string;
+  icon: ReactNode;
+}) {
+  return (
+    <GlassCard hover>
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-sm text-text-tertiary mb-1">{title}</p>
+          <p className="text-3xl font-bold text-text">{value}</p>
+          <p className="text-xs text-text-secondary mt-1">{subtitle}</p>
+        </div>
+        <div className="p-3 rounded-xl bg-sky/20">{icon}</div>
+      </div>
+    </GlassCard>
+  );
+}
+
+function HealthRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between rounded-lg border border-divider-subtle bg-surface-solid px-3 py-2">
+      <span className="text-sm text-text-secondary">{label}</span>
+      <span className="text-sm font-semibold text-text">{value}</span>
     </div>
   );
 }

@@ -1,6 +1,96 @@
-import axios, { AxiosInstance, AxiosError } from 'axios';
+import axios, { AxiosError, AxiosInstance } from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+
+export interface CodeFile {
+  filename: string;
+  content: string;
+}
+
+export interface Diagnostics {
+  summary: string;
+  details: string[];
+  error_stage: string | null;
+}
+
+export interface ExecutionArtifact {
+  kind: string;
+  label: string;
+  mime_type: string;
+  base64_data: string;
+  description?: string;
+}
+
+export interface ExecutionResponse {
+  status: string;
+  job_id?: string;
+  output: string;
+  stdout: string;
+  stderr: string;
+  error: string;
+  execution_time: number | null;
+  compile_time_ms: number | null;
+  execution_time_ms: number | null;
+  total_time_ms: number | null;
+  queue_wait_ms: number | null;
+  submitted_at?: string | null;
+  started_at?: string | null;
+  finished_at?: string | null;
+  diagnostics: Diagnostics;
+  artifacts?: ExecutionArtifact[];
+  entry_file?: string | null;
+  compiler_profile?: string | null;
+  compiler_flags?: string;
+}
+
+export interface ExecutionRequest {
+  code?: string;
+  language: string;
+  input?: string;
+  files?: CodeFile[];
+  entry_file?: string;
+  compiler_profile?: string | null;
+  compiler_flags?: string;
+}
+
+export interface InteractiveSessionResponse {
+  status: string;
+  session_id: string;
+  interactive_url: string | null;
+  created_at?: string;
+  expires_at?: string;
+  stdout: string;
+  stderr: string;
+  message: string;
+}
+
+export interface SavedProject {
+  id: number;
+  name: string;
+  language: string;
+  input: string;
+  files: CodeFile[];
+  entry_file: string;
+  compiler_profile?: string | null;
+  compiler_flags: string;
+  is_public: boolean;
+  owner_username: string;
+  share_id?: string | null;
+  share_url?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SaveProjectRequest {
+  name: string;
+  language: string;
+  input: string;
+  files: CodeFile[];
+  entry_file: string;
+  compiler_profile?: string | null;
+  compiler_flags: string;
+  is_public: boolean;
+}
 
 class ApiService {
   private api: AxiosInstance;
@@ -13,7 +103,6 @@ class ApiService {
       },
     });
 
-    // Request interceptor to add auth token
     this.api.interceptors.request.use(
       (config) => {
         const token = localStorage.getItem('access_token');
@@ -25,7 +114,6 @@ class ApiService {
       (error) => Promise.reject(error)
     );
 
-    // Response interceptor for error handling
     this.api.interceptors.response.use(
       (response) => response,
       (error: AxiosError) => {
@@ -38,7 +126,6 @@ class ApiService {
     );
   }
 
-  // Auth endpoints
   async register(username: string, email: string, password: string) {
     const response = await this.api.post('/auth/register', {
       username,
@@ -61,27 +148,33 @@ class ApiService {
     return response.data;
   }
 
-  // Code execution endpoints
-  async executeAsync(code: string, language: string, input: string = '') {
-    const response = await this.api.post('/execute', {
-      code,
-      language,
-      input,
-    });
+  async executeAsync(payload: ExecutionRequest): Promise<ExecutionResponse> {
+    const response = await this.api.post('/execute', payload);
     return response.data;
   }
 
-  async getExecutionResult(jobId: string) {
+  async getExecutionResult(jobId: string): Promise<ExecutionResponse> {
     const response = await this.api.get(`/execute/result/${jobId}`);
     return response.data;
   }
 
-  async executeSync(code: string, language: string, input: string = '') {
-    const response = await this.api.post('/execute/sync', {
-      code,
-      language,
-      input,
-    });
+  async executeSync(payload: ExecutionRequest): Promise<ExecutionResponse> {
+    const response = await this.api.post('/execute/sync', payload);
+    return response.data;
+  }
+
+  async startInteractiveJavaSession(payload: ExecutionRequest): Promise<InteractiveSessionResponse> {
+    const response = await this.api.post('/execute/java/interactive', payload);
+    return response.data;
+  }
+
+  async getInteractiveJavaSession(sessionId: string): Promise<InteractiveSessionResponse> {
+    const response = await this.api.get(`/execute/java/interactive/${sessionId}`);
+    return response.data;
+  }
+
+  async stopInteractiveJavaSession(sessionId: string): Promise<InteractiveSessionResponse> {
+    const response = await this.api.delete(`/execute/java/interactive/${sessionId}`);
     return response.data;
   }
 
@@ -93,7 +186,6 @@ class ApiService {
     return response.data;
   }
 
-  // File operations
   async importFile(file: File) {
     const formData = new FormData();
     formData.append('file', file);
@@ -107,7 +199,8 @@ class ApiService {
   }
 
   async exportFile(filename: string, code: string, type: 'code' | 'pdf' = 'code') {
-    const response = await this.api.post('/export-file', 
+    const response = await this.api.post(
+      '/export-file',
       {
         filename,
         code,
@@ -120,7 +213,6 @@ class ApiService {
     return response.data;
   }
 
-  // Metrics endpoints (admin)
   async getQueueMetrics() {
     const response = await this.api.get('/metrics/queue');
     return response.data;
@@ -146,7 +238,31 @@ class ApiService {
     return response.data;
   }
 
-  // Root endpoint
+  async listProjects(): Promise<SavedProject[]> {
+    const response = await this.api.get('/projects');
+    return response.data;
+  }
+
+  async saveProject(payload: SaveProjectRequest): Promise<SavedProject> {
+    const response = await this.api.post('/projects/save', payload);
+    return response.data;
+  }
+
+  async updateProject(projectId: number, payload: SaveProjectRequest): Promise<SavedProject> {
+    const response = await this.api.put(`/projects/${projectId}`, payload);
+    return response.data;
+  }
+
+  async shareProject(projectId: number): Promise<SavedProject> {
+    const response = await this.api.post(`/projects/${projectId}/share`);
+    return response.data;
+  }
+
+  async getSharedProject(shareId: string): Promise<SavedProject> {
+    const response = await this.api.get(`/projects/shared/${shareId}`);
+    return response.data;
+  }
+
   async getRoot() {
     const response = await this.api.get('/');
     return response.data;

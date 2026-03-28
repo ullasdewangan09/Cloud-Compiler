@@ -1,7 +1,12 @@
+import os
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-DATABASE_URL = "postgresql://postgres:Rudramani*16@localhost/Cloud_compiler-auth"
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql://postgres:Rudramani*16@localhost/Cloud_compiler-auth",
+)
 
 engine = create_engine(DATABASE_URL)
 

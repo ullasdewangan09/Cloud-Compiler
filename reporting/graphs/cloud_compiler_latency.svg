@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="600" viewBox="0 0 1040 600">
+<rect width="100%" height="100%" fill="#f8fafc"/>
+<text x="520.0" y="42" text-anchor="middle" font-family="Segoe UI, Arial" font-size="24" font-weight="700" fill="#0f172a">Cloud Compiler Measured Average Latency</text>
+<text x="28" y="300.0" transform="rotate(-90 28 300.0)" text-anchor="middle" font-family="Segoe UI, Arial" font-size="14" fill="#475569">Average latency (ms)</text>
+<line x1="90" y1="90" x2="90" y2="500" stroke="#94a3b8" stroke-width="2"/>
+<line x1="90" y1="500" x2="1000" y2="500" stroke="#94a3b8" stroke-width="2"/>
+<line x1="90" y1="500.0" x2="1000" y2="500.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="78" y="504.0" text-anchor="end" font-family="Segoe UI, Arial" font-size="12" fill="#64748b">0</text>
+<line x1="90" y1="418.0" x2="1000" y2="418.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="78" y="422.0" text-anchor="end" font-family="Segoe UI, Arial" font-size="12" fill="#64748b">608</text>
+<line x1="90" y1="336.0" x2="1000" y2="336.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="78" y="340.0" text-anchor="end" font-family="Segoe UI, Arial" font-size="12" fill="#64748b">1215</text>
+<line x1="90" y1="254.0" x2="1000" y2="254.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="78" y="258.0" text-anchor="end" font-family="Segoe UI, Arial" font-size="12" fill="#64748b">1823</text>
+<line x1="90" y1="172.0" x2="1000" y2="172.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="78" y="176.0" text-anchor="end" font-family="Segoe UI, Arial" font-size="12" fill="#64748b">2430</text>
+<line x1="90" y1="90.0" x2="1000" y2="90.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="78" y="94.0" text-anchor="end" font-family="Segoe UI, Arial" font-size="12" fill="#64748b">3038</text>
+<rect x="110.0" y="482.3560342896623" width="52" height="17.643965710337707" rx="8" fill="#1d4ed8"/>
+<rect x="170.0" y="380.81888482397557" width="52" height="119.18111517602445" rx="8" fill="#059669"/>
+<rect x="230.0" y="265.65401884130927" width="52" height="234.3459811586907" rx="8" fill="#dc2626"/>
+<text x="194.0" y="526" text-anchor="middle" font-family="Segoe UI, Arial" font-size="14" fill="#0f172a">Python</text>
+<rect x="413.3333333333333" y="415.74378834377285" width="52" height="84.25621165622718" rx="8" fill="#1d4ed8"/>
+<rect x="473.3333333333333" y="371.2681470748506" width="52" height="128.7318529251494" rx="8" fill="#059669"/>
+<rect x="533.3333333333333" y="269.11965322590066" width="52" height="230.88034677409934" rx="8" fill="#dc2626"/>
+<text x="497.3333333333333" y="526" text-anchor="middle" font-family="Segoe UI, Arial" font-size="14" fill="#0f172a">C</text>
+<rect x="716.6666666666666" y="347.0316486664098" width="52" height="152.9683513335902" rx="8" fill="#1d4ed8"/>
+<rect x="776.6666666666666" y="305.1417377249319" width="52" height="194.85826227506814" rx="8" fill="#059669"/>
+<rect x="836.6666666666666" y="143.4782608695652" width="52" height="356.5217391304348" rx="8" fill="#dc2626"/>
+<text x="800.6666666666666" y="526" text-anchor="middle" font-family="Segoe UI, Arial" font-size="14" fill="#0f172a">C++</text>
+<rect x="750" y="50" width="16" height="16" rx="3" fill="#1d4ed8"/>
+<text x="774" y="63" font-family="Segoe UI, Arial" font-size="13" fill="#1e293b">Native local</text>
+<rect x="750" y="74" width="16" height="16" rx="3" fill="#059669"/>
+<text x="774" y="87" font-family="Segoe UI, Arial" font-size="13" fill="#1e293b">Cloud sync</text>
+<rect x="750" y="98" width="16" height="16" rx="3" fill="#dc2626"/>
+<text x="774" y="111" font-family="Segoe UI, Arial" font-size="13" fill="#1e293b">Cloud async</text>
+</svg>
