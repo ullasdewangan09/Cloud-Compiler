@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import Editor from '@monaco-editor/react';
 import { GlassCard } from './GlassCard';
 import { Loader2 } from 'lucide-react';
@@ -9,7 +10,7 @@ interface CodeEditorProps {
   readOnly?: boolean;
 }
 
-export function CodeEditor({ code, language, onChange, readOnly = false }: CodeEditorProps) {
+export const CodeEditor = memo(({ code, language, onChange, readOnly = false }: CodeEditorProps) => {
   const getMonacoLanguage = (lang: string) => {
     const languageMap: Record<string, string> = {
       python: 'python',
@@ -60,4 +61,4 @@ export function CodeEditor({ code, language, onChange, readOnly = false }: CodeE
       </div>
     </GlassCard>
   );
-}
+});

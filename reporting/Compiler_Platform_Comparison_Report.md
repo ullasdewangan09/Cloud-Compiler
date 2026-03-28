@@ -4,29 +4,45 @@
 
 This report compares **Cloud Compiler** with **Programiz**, **OnlineGDB**, **JDoodle**, **OneCompiler**, and **Ideone**.
 
-The report is intentionally split into two evidence types:
+The evidence is intentionally split into two categories:
 
-- **Measured results**: real benchmark data for Cloud Compiler versus the locally available native toolchains on this machine.
-- **Documented platform comparison**: feature-based comparison of Programiz and other online compilers using their official product pages and documentation.
+- **Measured internal results**: real benchmark data for Cloud Compiler versus locally available native toolchains on this machine.
+- **Documented external comparison**: feature-based comparison of Programiz and other online compilers using their official product pages already referenced in this workspace.
 
-This separation matters because external browser platforms were not benchmarked through an automated speed test in this workspace, so any direct runtime-speed claim about Programmiz, JDoodle, Ideone, or similar services would be weaker than the measured Cloud Compiler data.
+This keeps the report honest. Cloud Compiler latency is measured. External platform speed is **not** claimed as a measured result here.
+
+Generated from the current repository state on: **2026-03-28 19:56:01 UTC**
 
 ## Method
 
 ### Measured optimization data
 
-- Source: local benchmark run already generated in `reporting/compiler_comparison_results.json`
+- Source: `reporting/compiler_comparison_results.json`
 - Languages measured: Python, C, C++
 - Modes measured: native local, Cloud Compiler sync, Cloud Compiler async
 
 ### Documented comparison data
 
-The external platforms were scored on:
+The external platforms were compared on:
 
-- **Usability score (0-10)**: setup simplicity, sharing, input/output flow, collaboration, and accessibility
-- **Optimization-support score (0-10)**: debugger depth, version selection, multi-file support, API/embed options, and advanced execution controls
+- **Usability score (0-10)**: setup simplicity, sharing, workflow breadth, collaboration, and accessibility
+- **Optimization-support score (0-10)**: debugging depth, version selection, multi-file support, API/embed options, and advanced execution controls
 
-These are **feature-support scores**, not raw runtime-speed measurements.
+These scores are **feature-support scores**, not raw runtime-speed measurements.
+
+## What Changed in the Current Cloud Compiler
+
+Compared with the older report version, the current project now includes:
+
+- Multi-file projects with entry-file selection
+- Saved projects and public share links
+- Compiler profiles and custom run flags
+- Structured async status, stdout, stderr, diagnostics, and timing fields
+- Queue wait and latency dashboards
+- Java Swing preview support for normal execution
+- Interactive Java Swing sessions through local noVNC embedding
+
+That means Cloud Compiler should now be evaluated as a broader coding platform rather than as a simple single-file runner.
 
 ## Graphs
 
@@ -50,7 +66,7 @@ These are **feature-support scores**, not raw runtime-speed measurements.
 
 | Platform | Supported languages | Usability score | Optimization-support score |
 | --- | --- | --- | --- |
-| Cloud Compiler | 4 | 8.0 | 5.0 |
+| Cloud Compiler | 4 | 9.0 | 8.0 |
 | Programiz | 17 | 5.5 | 2.0 |
 | OnlineGDB | 45 | 8.5 | 7.5 |
 | JDoodle | 88 | 9.5 | 10.0 |
@@ -61,8 +77,8 @@ These are **feature-support scores**, not raw runtime-speed measurements.
 
 | Platform | Debugger | Stdin | Sharing | Collaboration | API / Embed | Multi-file | Version selection | Mobile / Anywhere |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Cloud Compiler | No | Yes | Partial | No | Internal API only | No | No | No |
-| Programiz | No visible debugger | Not clearly documented on landing page | Yes | No visible collaboration | No visible API on examined pages | No visible multi-file workflow | No visible version selection | Not documented on examined pages |
+| Cloud Compiler | No built-in step debugger | Yes | Yes | Public share links | Internal authenticated API | Yes | Compiler profiles + custom flags | Browser-based (best on desktop) |
+| Programiz | No visible debugger | Not clearly documented on examined pages | Yes | No visible collaboration | No visible API on examined pages | No visible multi-file workflow | No visible version selection | Not documented on examined pages |
 | OnlineGDB | Yes | Yes | Yes | Classroom support | No prominent public API on examined page | Yes | Partial via language standards / variants | Browser-based |
 | JDoodle | Advanced IDE features | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
 | OneCompiler | No prominent debugger on examined pages | Likely in product flow, not highlighted on about pages | Yes | Yes | Yes | Studio project environment available | Not prominently documented | Yes |
@@ -70,23 +86,23 @@ These are **feature-support scores**, not raw runtime-speed measurements.
 
 ## What the Graphs Show
 
-### Programmiz versus other online compilers
+### Programiz versus other online compilers
 
-- **Programiz** is easy to use and share, which makes it good for quick learning tasks and short examples.
-- Compared with **OnlineGDB**, **JDoodle**, and **OneCompiler**, Programiz exposes fewer advanced workflow features from the examined product pages.
-- Programiz appears weaker than **OnlineGDB** for debugging, weaker than **JDoodle** for configurable IDE workflows and APIs, and weaker than **OneCompiler** for organizations, embedded editors, and team use.
-- Against **Ideone**, Programiz looks more learning-oriented, while Ideone looks more like a remote execution service with API/widget roots and time-limit controls.
+- **Programiz** still looks strongest as a low-friction learning tool for quick browser runs and easy sharing.
+- Compared with **OnlineGDB**, **JDoodle**, and **OneCompiler**, Programiz exposes fewer advanced workflow features from the examined documentation.
+- Programiz appears weaker than **OnlineGDB** for debugging, weaker than **JDoodle** for configurable IDE workflows and APIs, and weaker than **OneCompiler** for team-style or studio-style usage.
+- Against **Ideone**, Programiz looks more tutorial-oriented, while Ideone looks more like a remote execution utility with API/widget roots.
 
-### Where Cloud Compiler stands
+### Where Cloud Compiler stands now
 
-- **Cloud Compiler** is much narrower in language coverage than Programiz and the larger commercial platforms.
-- Its strongest differentiators are the combination of **browser execution**, **Docker isolation**, **sync plus async execution**, and **built-in worker/queue/system metrics**.
-- In measured latency, Cloud Compiler is slower than native execution, especially in async mode.
-- In managed usability, Cloud Compiler compares surprisingly well because it bundles stdin, output history, import/export, complexity analysis, and admin observability in one project.
+- **Cloud Compiler** still has a smaller language set than the larger commercial platforms.
+- Its platform strengths are now much clearer than before: **Docker isolation**, **sync + async execution**, **save/share**, **multi-file support**, **compiler profiles/flags**, and **observability dashboards**.
+- The Java Swing path is a distinctive capability for a student project because it supports both preview artifacts and interactive browser sessions.
+- In raw speed, Cloud Compiler is still slower than native local execution, especially in async mode. In managed usability, it is much stronger than the earlier single-file version.
 
 ## Cross-Platform Takeaways
 
-- **Cloud Compiler**: Best for managed browser-based execution inside this project.
+- **Cloud Compiler**: Best for an observable educational platform with Docker isolation, save/share, multi-file workspaces, and Java Swing browser workflows.
 - **Programiz**: Good for quick learning-oriented browser execution and easy sharing.
 - **OnlineGDB**: Strong educational IDE with live debugging and classroom support.
 - **JDoodle**: Most feature-rich documented platform in this comparison.
@@ -97,40 +113,38 @@ These are **feature-support scores**, not raw runtime-speed measurements.
 
 | Language | Native avg (ms) | Cloud sync avg (ms) | Cloud async avg (ms) |
 | --- | --- | --- | --- |
-| Python | 130.74 | 883.12 | 1736.48 |
-| C | 624.33 | 953.89 | 1710.8 |
-| C++ | 1133.48 | 1443.88 | 2641.79 |
+| C | 114.25 | 1627.46 | 2567.13 |
+| C++ | 93.95 | 2712.69 | 4294.62 |
+| Python | 300.59 | 1545.61 | 2533.95 |
 
 ## Final Interpretation
 
 - If the priority is **fast local execution**, native compilers remain the best baseline.
-- If the priority is **simple browser use for beginners**, Programiz is attractive because of its low-friction interface.
-- If the priority is **debugging and classroom use**, OnlineGDB is stronger than Programiz.
-- If the priority is **enterprise-grade integrations, collaboration, multi-file projects, APIs, and configurable versions**, JDoodle is the strongest documented platform in this comparison.
-- If the priority is **broad browser-based coding with APIs and team workflows**, OneCompiler is also very strong.
-- **Cloud Compiler** is best positioned as a custom, observable, Docker-isolated educational or institutional platform rather than as the fastest compiler service in this group.
+- If the priority is **simple browser use for beginners**, Programiz is still attractive because of its low-friction interface.
+- If the priority is **debugging and classroom use**, OnlineGDB remains stronger than Programiz.
+- If the priority is **enterprise-style integrations, collaboration, multi-file projects, APIs, and configurable versions**, JDoodle remains the strongest documented external platform in this comparison.
+- **Cloud Compiler** now fits best as a custom, observable, browser-based coding platform for institutional, classroom, or showcase use cases rather than as the broadest or fastest compiler service.
 
 ## Recommendations for Your Project
 
-1. Add multi-file project support if you want to compete more directly with JDoodle, OneCompiler, and OnlineGDB.
-2. Add structured async telemetry and queue wait graphs so your observability advantage becomes more visible.
-3. Add compiler version selection and advanced run flags for C, C++, Java, and Python.
-4. Add sharing or saved project links to compete better with Programiz and Ideone.
-5. Add debugger-oriented tooling or richer error grouping if debugging experience is part of your evaluation.
-6. Keep using measured benchmark graphs for your own platform, but describe external platforms using documented features unless you can run controlled benchmarks against them fairly.
+1. Add step-debugging or richer trace tooling if you want to close the gap with debugger-oriented platforms.
+2. Proxy interactive Swing sessions through the backend for production-safe remote access instead of local-only noVNC ports.
+3. Expand compiler-version coverage and language support if broader parity with JDoodle or OneCompiler is a goal.
+4. Add collaborative editing, comments, or instructor review flows if classroom use is part of the product direction.
+5. Continue using measured benchmark graphs for your own platform and keep external platform claims explicitly feature-based unless you run controlled, fair benchmarks.
 
 ## Sources
 
 | Platform | Source |
 | --- | --- |
-| Cloud Compiler | Local project analysis + measured benchmark run in reporting/compiler_comparison_results.json |
+| Cloud Compiler | Local project analysis of the current repository plus measured benchmark data from reporting/compiler_comparison_results.json |
 | Programiz | https://programiz.io/ and https://www.programiz.com/c-programming/online-compiler/ |
 | OnlineGDB | https://www.onlinegdb.com/ide |
 | JDoodle | https://www.jdoodle.com/docs and https://www.jdoodle.com/docs/ide/languages-versions |
 | OneCompiler | https://onecompiler.com/ , https://onecompiler.com/about , https://onecompiler.com/studio |
 | Ideone | https://www.ideone.com/ and https://1.ideone.com/languages |
 
-Local benchmark source:
+Local measured benchmark source:
 
 - `reporting/compiler_comparison_results.json`
 - `reporting/Compiler_Comparison_Final_Report.md`

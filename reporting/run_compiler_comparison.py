@@ -11,6 +11,7 @@ import textwrap
 import time
 import uuid
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -19,9 +20,15 @@ import redis
 
 ROOT = Path(__file__).resolve().parents[1]
 REPORTING_DIR = ROOT / "reporting"
-BACKEND_DIR = ROOT / "backend"
 WORKER_DIR = ROOT / "worker"
-VENV_PYTHON = ROOT / ".venv" / "Scripts" / "python.exe"
+ROOT_VENV_PYTHON = ROOT / ".venv" / "Scripts" / "python.exe"
+WORKER_VENV_PYTHON = WORKER_DIR / ".venv" / "Scripts" / "python.exe"
+
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from backend.execution_engine import DEFAULT_PROFILES, execute_in_docker  # noqa: E402
+
 
 RESULTS_JSON = REPORTING_DIR / "compiler_comparison_results.json"
 REPORT_MD = REPORTING_DIR / "Compiler_Comparison_Final_Report.md"
@@ -29,6 +36,7 @@ REPORT_MD = REPORTING_DIR / "Compiler_Comparison_Final_Report.md"
 REDIS_CONTAINER_NAME = "cloud-compiler-bench-redis"
 REDIS_URL = {"host": "localhost", "port": 6379, "db": 0, "decode_responses": True}
 QUEUE_NAME = "code_queue"
+WORKER_REGISTRY_KEY = "worker_registry"
 
 RUNS_PER_BENCHMARK = 5
 
@@ -229,42 +237,57 @@ USABILITY_SCORES = [
         "criterion": "Setup effort for end users",
         "cloud_compiler": 5,
         "native_toolchain": 2,
-        "basis": "Browser-based access removes local compiler installation for users.",
+        "basis": "Cloud Compiler stays browser-first, while native use still requires separate local toolchain setup.",
+    },
+    {
+        "criterion": "Workflow breadth",
+        "cloud_compiler": 5,
+        "native_toolchain": 2,
+        "basis": "The current workspace supports multi-file projects, entry-file selection, save/share, compiler profiles, and compiler flags.",
     },
     {
         "criterion": "Execution flexibility",
         "cloud_compiler": 5,
         "native_toolchain": 3,
-        "basis": "Cloud Compiler provides both synchronous and asynchronous execution paths.",
-    },
-    {
-        "criterion": "Input and output workflow",
-        "cloud_compiler": 5,
-        "native_toolchain": 3,
-        "basis": "Workspace includes stdin, output history, import/export, and PDF export.",
+        "basis": "Cloud Compiler offers synchronous, asynchronous, and Java Swing interactive execution flows.",
     },
     {
         "criterion": "Operational visibility",
         "cloud_compiler": 5,
         "native_toolchain": 1,
-        "basis": "Queue, worker, and system metrics are built into the platform.",
+        "basis": "Queue metrics, worker heartbeat data, timing telemetry, and dashboard views are built into the platform.",
+    },
+    {
+        "criterion": "Sharing and reproducibility",
+        "cloud_compiler": 5,
+        "native_toolchain": 2,
+        "basis": "Saved projects and public share links make it easier to reopen or review exactly the same code state.",
+    },
+    {
+        "criterion": "Diagnostics quality",
+        "cloud_compiler": 4,
+        "native_toolchain": 4,
+        "basis": "Both paths expose compiler/runtime output, while Cloud Compiler now also returns structured diagnostics and timing fields.",
     },
     {
         "criterion": "Performance immediacy",
         "cloud_compiler": 3,
         "native_toolchain": 5,
-        "basis": "Native execution avoids Docker, Redis, and polling overhead.",
-    },
-    {
-        "criterion": "Error clarity",
-        "cloud_compiler": 3,
-        "native_toolchain": 4,
-        "basis": "Native toolchains return direct compiler/runtime errors; async path currently stores output as raw text only.",
+        "basis": "Native execution still avoids queueing, Redis polling, bind mounts, and container startup overhead.",
     },
 ]
 
 
-def run_command(command: list[str], cwd: Path | None = None, input_text: str = "", timeout: int = 60) -> subprocess.CompletedProcess[str]:
+def utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def run_command(
+    command: list[str],
+    cwd: Path | None = None,
+    input_text: str = "",
+    timeout: int = 60,
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         command,
         cwd=str(cwd) if cwd else None,
@@ -276,15 +299,28 @@ def run_command(command: list[str], cwd: Path | None = None, input_text: str = "
     )
 
 
+def benchmark_python_executable() -> str:
+    if ROOT_VENV_PYTHON.exists():
+        return str(ROOT_VENV_PYTHON)
+    if WORKER_VENV_PYTHON.exists():
+        return str(WORKER_VENV_PYTHON)
+    return sys.executable
+
+
+def worker_python_executable() -> str:
+    if WORKER_VENV_PYTHON.exists():
+        return str(WORKER_VENV_PYTHON)
+    if ROOT_VENV_PYTHON.exists():
+        return str(ROOT_VENV_PYTHON)
+    return sys.executable
+
+
 def ensure_environment() -> dict[str, Any]:
-    if not VENV_PYTHON.exists():
-        raise RuntimeError(f"Expected virtualenv python at {VENV_PYTHON}")
+    python_launcher = shutil.which("py")
+    gcc_path = shutil.which("gcc")
+    gpp_path = shutil.which("g++")
 
-    gcc_exists = shutil.which("gcc") is not None
-    gpp_exists = shutil.which("g++") is not None
-    py_exists = shutil.which("py") is not None
-
-    if not all([gcc_exists, gpp_exists, py_exists]):
+    if not all([python_launcher, gcc_path, gpp_path]):
         raise RuntimeError("Required local tools are missing. Need py, gcc, and g++.")
 
     docker_version = run_command(["docker", "version"], cwd=ROOT)
@@ -292,10 +328,12 @@ def ensure_environment() -> dict[str, Any]:
         raise RuntimeError(f"Docker is unavailable: {docker_version.stderr or docker_version.stdout}")
 
     return {
-        "python_launcher": shutil.which("py"),
-        "gcc": shutil.which("gcc"),
-        "gpp": shutil.which("g++"),
-        "venv_python": str(VENV_PYTHON),
+        "python_launcher": python_launcher,
+        "gcc": gcc_path,
+        "gpp": gpp_path,
+        "benchmark_python": benchmark_python_executable(),
+        "worker_python": worker_python_executable(),
+        "root": str(ROOT),
     }
 
 
@@ -318,94 +356,96 @@ def start_redis_container() -> tuple[bool, redis.Redis]:
             REDIS_CONTAINER_NAME,
             "-p",
             "6379:6379",
-            "redis:latest",
+            "redis:7-alpine",
         ],
         cwd=ROOT,
-        timeout=60,
     )
     if start.returncode != 0:
         raise RuntimeError(f"Failed to start Redis container: {start.stderr or start.stdout}")
 
-    deadline = time.time() + 30
-    last_error = None
+    deadline = time.time() + 20
     while time.time() < deadline:
         try:
-            client = redis.Redis(**REDIS_URL)
             client.ping()
             return True, client
-        except redis.RedisError as exc:
-            last_error = exc
+        except redis.RedisError:
             time.sleep(0.5)
 
-    raise RuntimeError(f"Redis did not become ready: {last_error}")
+    raise RuntimeError("Redis did not become ready in time.")
 
 
-def stop_redis_container(started_here: bool) -> None:
-    if started_here:
-        run_command(["docker", "rm", "-f", REDIS_CONTAINER_NAME], cwd=ROOT, timeout=30)
+def stop_redis_container(redis_started_here: bool) -> None:
+    if redis_started_here:
+        run_command(["docker", "rm", "-f", REDIS_CONTAINER_NAME], cwd=ROOT)
 
 
 def start_worker_process() -> subprocess.Popen[str]:
     env = os.environ.copy()
-    env["REDIS_HOST"] = "localhost"
-    env["REDIS_PORT"] = "6379"
-    env["QUEUE_NAME"] = QUEUE_NAME
-    env["WORKER_REGISTRY_KEY"] = "worker_registry"
-    env["PYTHONIOENCODING"] = "utf-8"
+    env["PYTHONPATH"] = str(ROOT)
+    env.setdefault("REDIS_HOST", str(REDIS_URL["host"]))
+    env.setdefault("REDIS_PORT", str(REDIS_URL["port"]))
+    env.setdefault("QUEUE_NAME", QUEUE_NAME)
+    env.setdefault("WORKER_REGISTRY_KEY", WORKER_REGISTRY_KEY)
 
-    process = subprocess.Popen(
-        [str(VENV_PYTHON), "worker.py"],
+    return subprocess.Popen(
+        [worker_python_executable(), "worker.py"],
         cwd=str(WORKER_DIR),
-        env=env,
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
         text=True,
+        env=env,
     )
-    return process
 
 
 def stop_worker_process(process: subprocess.Popen[str]) -> None:
-    if process.poll() is None:
-        process.terminate()
-        try:
-            process.wait(timeout=10)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            process.wait(timeout=10)
+    if process.poll() is not None:
+        return
+    process.terminate()
+    try:
+        process.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait(timeout=5)
 
 
-def wait_for_worker_ready(r: redis.Redis) -> None:
+def wait_for_worker_ready(client: redis.Redis) -> None:
     deadline = time.time() + 30
     while time.time() < deadline:
-        workers = r.hgetall("worker_registry")
-        if workers:
+        registry = client.hgetall(WORKER_REGISTRY_KEY)
+        if registry:
             return
         time.sleep(0.5)
-    raise RuntimeError("Worker did not register in Redis.")
+    raise RuntimeError("Worker did not register in Redis in time.")
 
 
 def check_output(actual: str, expected: str) -> bool:
-    return actual.replace("\r\n", "\n").strip() == expected.replace("\r\n", "\n").strip()
+    return actual.replace("\r\n", "\n") == expected.replace("\r\n", "\n")
 
 
-def summarize_durations(durations: list[float], successes: int, total_runs: int) -> dict[str, Any]:
-    sorted_values = sorted(durations)
-    if sorted_values:
-        p95_index = max(0, min(len(sorted_values) - 1, round(0.95 * (len(sorted_values) - 1))))
-        p95 = sorted_values[p95_index]
-        avg = statistics.mean(sorted_values)
-        median = statistics.median(sorted_values)
+def summarize_durations(
+    durations: list[float],
+    successes: int,
+    total_runs: int,
+) -> dict[str, float | int | None]:
+    if not durations:
+        return {
+            "avg_ms": None,
+            "median_ms": None,
+            "p95_ms": None,
+            "success_rate_percent": 0,
+        }
+
+    durations_ms = [value * 1000 for value in durations]
+    if len(durations_ms) == 1:
+        p95 = durations_ms[0]
     else:
-        avg = median = p95 = None
+        p95 = statistics.quantiles(durations_ms, n=20, method="inclusive")[18]
 
     return {
-        "runs": total_runs,
-        "successes": successes,
-        "success_rate_percent": round((successes / total_runs) * 100, 2) if total_runs else 0.0,
-        "avg_ms": round(avg * 1000, 2) if avg is not None else None,
-        "median_ms": round(median * 1000, 2) if median is not None else None,
-        "p95_ms": round(p95 * 1000, 2) if p95 is not None else None,
-        "raw_ms": [round(value * 1000, 2) for value in durations],
+        "avg_ms": round(statistics.mean(durations_ms), 2),
+        "median_ms": round(statistics.median(durations_ms), 2),
+        "p95_ms": round(p95, 2),
+        "success_rate_percent": round((successes / total_runs) * 100, 2),
     }
 
 
@@ -415,45 +455,54 @@ def benchmark_native(case: BenchmarkCase) -> dict[str, Any]:
     sample_output = ""
     sample_error = ""
 
-    for _ in range(RUNS_PER_BENCHMARK):
-        with tempfile.TemporaryDirectory() as tmp:
-            tmp_path = Path(tmp)
+    with tempfile.TemporaryDirectory(prefix=f"cloud_native_{case.language}_") as tmp_dir:
+        tmp_path = Path(tmp_dir)
+
+        if case.language == "python":
+            script_path = tmp_path / "main.py"
+            script_path.write_text(case.code, encoding="utf-8")
+            command = [benchmark_python_executable(), str(script_path)]
+        elif case.language == "c":
+            source_path = tmp_path / "main.c"
+            exe_path = tmp_path / "program.exe"
+            source_path.write_text(case.code, encoding="utf-8")
+            compile_result = run_command(["gcc", "-O2", str(source_path), "-o", str(exe_path)], cwd=tmp_path)
+            if compile_result.returncode != 0:
+                return {
+                    "avg_ms": None,
+                    "median_ms": None,
+                    "p95_ms": None,
+                    "success_rate_percent": 0,
+                    "sample_output": "",
+                    "sample_error": compile_result.stderr or compile_result.stdout,
+                }
+            command = [str(exe_path)]
+        elif case.language == "cpp":
+            source_path = tmp_path / "main.cpp"
+            exe_path = tmp_path / "program.exe"
+            source_path.write_text(case.code, encoding="utf-8")
+            compile_result = run_command(["g++", "-O2", "-std=c++17", str(source_path), "-o", str(exe_path)], cwd=tmp_path)
+            if compile_result.returncode != 0:
+                return {
+                    "avg_ms": None,
+                    "median_ms": None,
+                    "p95_ms": None,
+                    "success_rate_percent": 0,
+                    "sample_output": "",
+                    "sample_error": compile_result.stderr or compile_result.stdout,
+                }
+            command = [str(exe_path)]
+        else:
+            raise ValueError(f"Unsupported native benchmark language: {case.language}")
+
+        for _ in range(RUNS_PER_BENCHMARK):
             start = time.perf_counter()
-
-            if case.language == "python":
-                source = tmp_path / "code.py"
-                source.write_text(case.code, encoding="utf-8")
-                result = run_command(["py", "-3", "code.py"], cwd=tmp_path, input_text=case.user_input)
-            elif case.language == "c":
-                source = tmp_path / "code.c"
-                source.write_text(case.code, encoding="utf-8")
-                compile_result = run_command(["gcc", "code.c", "-O2", "-o", "program.exe"], cwd=tmp_path)
-                if compile_result.returncode == 0:
-                    result = run_command([str(tmp_path / "program.exe")], cwd=tmp_path, input_text=case.user_input)
-                    result.stdout = compile_result.stdout + result.stdout
-                    result.stderr = compile_result.stderr + result.stderr
-                    result.returncode = result.returncode
-                else:
-                    result = compile_result
-            elif case.language == "cpp":
-                source = tmp_path / "code.cpp"
-                source.write_text(case.code, encoding="utf-8")
-                compile_result = run_command(["g++", "code.cpp", "-O2", "-o", "program.exe"], cwd=tmp_path)
-                if compile_result.returncode == 0:
-                    result = run_command([str(tmp_path / "program.exe")], cwd=tmp_path, input_text=case.user_input)
-                    result.stdout = compile_result.stdout + result.stdout
-                    result.stderr = compile_result.stderr + result.stderr
-                    result.returncode = result.returncode
-                else:
-                    result = compile_result
-            else:
-                raise ValueError(f"Unsupported language for native benchmark: {case.language}")
-
+            completed = run_command(command, cwd=tmp_path, input_text=case.user_input, timeout=60)
             duration = time.perf_counter() - start
             durations.append(duration)
-            sample_output = result.stdout
-            sample_error = result.stderr
-            if result.returncode == 0 and check_output(result.stdout, case.expected_output):
+            sample_output = completed.stdout
+            sample_error = completed.stderr
+            if completed.returncode == 0 and check_output(completed.stdout, case.expected_output):
                 successes += 1
 
     summary = summarize_durations(durations, successes, RUNS_PER_BENCHMARK)
@@ -463,23 +512,27 @@ def benchmark_native(case: BenchmarkCase) -> dict[str, Any]:
 
 
 def benchmark_sync(case: BenchmarkCase) -> dict[str, Any]:
-    sys.path.insert(0, str(BACKEND_DIR))
-    from autoscaler.docker_manager import DockerManager  # type: ignore
-
-    manager = DockerManager()
     durations: list[float] = []
     successes = 0
     sample_output = ""
     sample_error = ""
 
+    payload = {
+        "language": case.language,
+        "code": case.code,
+        "input": case.user_input,
+        "compiler_profile": DEFAULT_PROFILES[case.language],
+        "compiler_flags": "",
+    }
+
     for _ in range(RUNS_PER_BENCHMARK):
         start = time.perf_counter()
-        result = manager.run_container(case.language, case.code, case.user_input)
+        result = execute_in_docker(payload)
         duration = time.perf_counter() - start
         durations.append(duration)
         sample_output = result.get("output", "")
-        sample_error = result.get("error", "")
-        if result.get("status") == "success" and check_output(sample_output, case.expected_output):
+        sample_error = result.get("stderr", "") or result.get("error", "")
+        if result.get("status") == "success" and check_output(result.get("output", ""), case.expected_output):
             successes += 1
 
     summary = summarize_durations(durations, successes, RUNS_PER_BENCHMARK)
@@ -488,45 +541,55 @@ def benchmark_sync(case: BenchmarkCase) -> dict[str, Any]:
     return summary
 
 
-def benchmark_async(case: BenchmarkCase, r: redis.Redis) -> dict[str, Any]:
+def benchmark_async(case: BenchmarkCase, client: redis.Redis) -> dict[str, Any]:
     durations: list[float] = []
     successes = 0
     sample_output = ""
+    sample_error = ""
 
     for _ in range(RUNS_PER_BENCHMARK):
         job_id = str(uuid.uuid4())
+        submitted_at = utc_now_iso()
         payload = {
             "job_id": job_id,
             "language": case.language,
             "code": case.code,
             "input": case.user_input,
+            "compiler_profile": DEFAULT_PROFILES[case.language],
+            "compiler_flags": "",
+            "submitted_at": submitted_at,
+            "username": "benchmark_runner",
         }
 
         start = time.perf_counter()
-        r.lpush(QUEUE_NAME, json.dumps(payload))
+        client.lpush(QUEUE_NAME, json.dumps(payload))
 
-        deadline = time.time() + 60
-        result_value: str | None = None
+        deadline = time.time() + 90
+        parsed: dict[str, Any] | None = None
         while time.time() < deadline:
-            raw = r.get(f"result:{job_id}")
-            if raw is not None:
-                result_value = raw
-                break
+            raw = client.get(f"job:{job_id}") or client.get(f"result:{job_id}")
+            if raw:
+                parsed = json.loads(raw)
+                if parsed.get("status") not in {"submitted", "running", "pending"}:
+                    break
             time.sleep(0.05)
 
         duration = time.perf_counter() - start
         durations.append(duration)
 
-        if result_value is None:
+        if not parsed:
             sample_output = ""
-        else:
-            sample_output = result_value
-            if check_output(result_value, case.expected_output):
-                successes += 1
+            sample_error = "Timed out waiting for async result."
+            continue
+
+        sample_output = parsed.get("output", "")
+        sample_error = parsed.get("stderr", "") or parsed.get("error", "")
+        if parsed.get("status") == "success" and check_output(parsed.get("output", ""), case.expected_output):
+            successes += 1
 
     summary = summarize_durations(durations, successes, RUNS_PER_BENCHMARK)
     summary["sample_output"] = sample_output
-    summary["sample_error"] = ""
+    summary["sample_error"] = sample_error
     return summary
 
 
@@ -544,7 +607,9 @@ def aggregate_language_results(results: list[dict[str, Any]], mode: str) -> dict
     for lang, values in by_language.items():
         summary[lang] = {
             "avg_ms": round(sum(values) / len(values), 2) if values else None,
-            "success_rate_percent": round(sum(success_rates[lang]) / len(success_rates[lang]), 2) if success_rates.get(lang) else None,
+            "success_rate_percent": round(sum(success_rates[lang]) / len(success_rates[lang]), 2)
+            if success_rates.get(lang)
+            else None,
         }
     return summary
 
@@ -553,6 +618,9 @@ def build_report(results: list[dict[str, Any]], environment: dict[str, Any]) -> 
     native_summary = aggregate_language_results(results, "native")
     sync_summary = aggregate_language_results(results, "cloud_sync")
     async_summary = aggregate_language_results(results, "cloud_async")
+
+    cloud_total = sum(item["cloud_compiler"] for item in USABILITY_SCORES)
+    native_total = sum(item["native_toolchain"] for item in USABILITY_SCORES)
 
     lines: list[str] = [
         "# Final Compiler Comparison Report",
@@ -564,8 +632,8 @@ def build_report(results: list[dict[str, Any]], environment: dict[str, Any]) -> 
         "Compared systems:",
         "",
         "- Native local execution using `py -3`, `gcc`, and `g++`.",
-        "- Cloud Compiler synchronous execution using `backend/autoscaler/docker_manager.py`.",
-        "- Cloud Compiler asynchronous execution using Redis plus `worker/worker.py`.",
+        "- Cloud Compiler synchronous execution using `backend.execution_engine.execute_in_docker`.",
+        "- Cloud Compiler asynchronous execution using Redis plus `worker/worker.py` with structured job telemetry.",
         "",
         "Languages benchmarked:",
         "",
@@ -575,17 +643,30 @@ def build_report(results: list[dict[str, Any]], environment: dict[str, Any]) -> 
         "",
         "Language not benchmarked:",
         "",
-        "- Java, because a native local `javac` / `java` baseline was not available on this machine during the test run.",
+        "- Java, because a native local `javac` / `java` baseline was not available on this machine during the measured run.",
+        "",
+        "## Current Project Context",
+        "",
+        "The comparison should be interpreted against the project as it exists now, not the earlier prototype. The current Cloud Compiler includes:",
+        "",
+        "- Multi-file projects with entry-file selection.",
+        "- Saved projects and public share links.",
+        "- Compiler profiles and custom compiler flags.",
+        "- Structured async status, stdout, stderr, diagnostics, and timing fields.",
+        "- Queue, worker, and latency dashboards.",
+        "- Java Swing preview artifacts for normal runs.",
+        "- Interactive Java Swing sessions through local noVNC embedding.",
         "",
         "## Test Environment",
         "",
-        f"- Date: {time.strftime('%Y-%m-%d %H:%M:%S')}",
+        f"- Date (UTC): {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}",
         f"- Host Python launcher: `{environment['python_launcher']}`",
         f"- Local GCC: `{environment['gcc']}`",
         f"- Local G++: `{environment['gpp']}`",
-        f"- Benchmark virtualenv Python: `{environment['venv_python']}`",
+        f"- Benchmark Python: `{environment['benchmark_python']}`",
+        f"- Worker Python: `{environment['worker_python']}`",
         "- Docker Desktop: available and used for sync and async cloud execution.",
-        "- Redis: started in Docker for async queue benchmarking.",
+        "- Redis: started in Docker for async queue benchmarking when needed.",
         f"- Runs per benchmark case: {RUNS_PER_BENCHMARK}",
         "",
         "## Method",
@@ -640,11 +721,11 @@ def build_report(results: list[dict[str, Any]], environment: dict[str, Any]) -> 
             "",
             "### Optimization Interpretation",
             "",
-            "- Native local execution was generally the fastest path because it avoids container startup, bind mounts, queueing, and Redis polling.",
-            "- Cloud sync execution was usually slower than native execution, but it provided the closest cloud experience to an immediate 'Run' action.",
-            "- Cloud async execution was the slowest mode because it includes queue submission, worker polling, and the worker loop delay in addition to container startup.",
-            "- Some native C and C++ averages showed large outliers on Windows, so the median values are often a better indicator of steady-state local performance than the raw average alone.",
-            "- All reported success rates should be read as execution correctness on the chosen benchmarks, not as a full reliability guarantee across all programs.",
+            "- Native local execution remains the performance winner because it avoids Docker startup, bind mounts, queueing, and Redis polling.",
+            "- Cloud sync is the fastest managed mode in this project and best reflects the immediate browser workflow.",
+            "- Cloud async is slower, but that cost now buys more observability and safer decoupling than the earlier prototype offered.",
+            "- The current async path is no longer a blind fire-and-forget queue. It preserves structured status, timings, diagnostics, and output fields, which makes the slower path easier to reason about operationally.",
+            "- Results should be read as end-to-end user-visible latency rather than isolated compiler-only runtime.",
             "",
             "## Efficient Usability Comparison",
             "",
@@ -658,9 +739,6 @@ def build_report(results: list[dict[str, Any]], environment: dict[str, Any]) -> 
             f"| {row['criterion']} | {row['cloud_compiler']} | {row['native_toolchain']} | {row['basis']} |"
         )
 
-    cloud_total = sum(item["cloud_compiler"] for item in USABILITY_SCORES)
-    native_total = sum(item["native_toolchain"] for item in USABILITY_SCORES)
-
     lines.extend(
         [
             "",
@@ -668,30 +746,30 @@ def build_report(results: list[dict[str, Any]], environment: dict[str, Any]) -> 
             "",
             "### Usability Interpretation",
             "",
-            "- Cloud Compiler is clearly stronger for end-user accessibility because the user only needs a browser-facing interface rather than separate local compiler installation and configuration.",
-            "- Native toolchains are stronger for immediate performance and direct low-level error feedback.",
-            "- Cloud Compiler offers better operational usability for teaching, demos, or managed environments because it includes queue monitoring, worker visibility, stdin handling, export features, and a shared UI.",
-            "- The current async result model reduces usability quality because compile errors, runtime errors, and timeouts are not stored as structured result objects.",
+            "- Cloud Compiler is now materially stronger than a plain native toolchain for managed coursework, demos, and platform-style workflows because it combines execution, persistence, sharing, and observability in one UI.",
+            "- Native toolchains still win on raw responsiveness and unrestricted local debugging.",
+            "- The project's current usability advantage is broader than in the earlier report because multi-file projects, saved work, public sharing, compiler profiles, and structured diagnostics are already implemented.",
+            "- Java Swing support adds a differentiator that native CLI benchmarking does not capture well: browser-accessible GUI preview and interactive GUI sessions.",
             "",
             "## Key Findings",
             "",
-            "- For optimization, native execution is the performance winner.",
-            "- For managed usability, Cloud Compiler is the usability winner.",
-            "- Cloud sync is the best balance inside this project when low latency matters.",
-            "- Cloud async is the right architecture for scale, but it currently pays a noticeable latency cost and needs better telemetry.",
+            "- For optimization, native execution is still the performance winner.",
+            "- For managed usability, the current Cloud Compiler is stronger than before because the feature set is no longer limited to single-file execution.",
+            "- Cloud sync is the best balance when fast feedback matters inside the platform.",
+            "- Cloud async is no longer merely a scaling path. It is also the project's observable, telemetry-rich execution path.",
             "",
-            "## Project Improvements Recommended from the Measured Comparison",
+            "## Improvement Priorities From the Current Comparison",
             "",
-            "1. Store structured async results with `status`, `stdout`, `stderr`, `submitted_at`, `started_at`, `finished_at`, and `total_time_ms`.",
-            "2. Move async worker execution into a per-job temporary directory instead of the shared `worker/` working directory.",
-            "3. Add queue wait time and execution time metrics to the monitoring API and frontend charts.",
-            "4. Fix misleading metrics labels so charts reflect real execution metrics rather than host CPU and memory under execution-time labels.",
-            "5. Add a reusable benchmark endpoint or admin-only benchmark runner so future comparisons can be repeated automatically.",
-            "6. Externalize secrets and deployment configuration before production use.",
+            "1. Reduce cold-start overhead with container prewarming, image slimming, or compile-result caching.",
+            "2. Add remote-safe proxying and authorization for interactive Swing sessions instead of exposing local-only noVNC ports.",
+            "3. Expand the compiler-version matrix beyond the current profile set and add more languages if broader platform parity is a goal.",
+            "4. Add debugger-oriented features such as grouped stack traces, breakpoint-friendly integrations, or richer runtime trace capture.",
+            "5. Add automated benchmark workflows that also measure Java once a native baseline is available on the host.",
+            "6. Add quota controls, audit logging, and CI-backed regression tests for save/share, async execution, and telemetry.",
             "",
             "## Conclusion",
             "",
-            "The measured comparison shows that Cloud Compiler should not be presented as faster than native compilers. Its real strength is efficient usability: centralized access, sandboxed execution, dual sync and async workflows, and built-in observability. If the project adds structured timing telemetry and improves the async execution path, it will be much better positioned for rigorous optimization comparisons in future evaluations.",
+            "The updated comparison shows that Cloud Compiler should still not be presented as faster than native compilers. Its strength is a managed execution experience: browser access, isolated runners, multi-file projects, save/share support, structured telemetry, and specialized Java Swing workflows. In its current state, the project is best positioned as an observable educational or institutional coding platform rather than as a raw speed competitor to native local compilers.",
         ]
     )
 
@@ -730,12 +808,11 @@ def main() -> None:
         payload = {
             "environment": environment,
             "runs_per_benchmark": RUNS_PER_BENCHMARK,
+            "generated_at": utc_now_iso(),
             "results": results,
         }
         RESULTS_JSON.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-
-        report_text = build_report(results, environment)
-        REPORT_MD.write_text(report_text, encoding="utf-8")
+        REPORT_MD.write_text(build_report(results, environment), encoding="utf-8")
 
         print(f"Saved benchmark results to {RESULTS_JSON}")
         print(f"Saved report to {REPORT_MD}")

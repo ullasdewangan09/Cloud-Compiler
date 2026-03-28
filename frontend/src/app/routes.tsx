@@ -1,10 +1,5 @@
-import { createBrowserRouter, Navigate } from 'react-router';
-import { Login } from './pages/Login';
-import { Register } from './pages/Register';
-import { Workspace } from './pages/Workspace';
-import { Metrics } from './pages/Metrics';
-import { Dashboard } from './pages/Dashboard';
-import { SharedProject } from './pages/SharedProject';
+import { Suspense } from 'react';
+import { createBrowserRouter } from 'react-router';
 import { Layout } from './Layout';
 import { ProtectedRoute } from './ProtectedRoute';
 
@@ -15,43 +10,49 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <Navigate to="/workspace" replace />,
+        lazy: () => import('./pages/LandingPage').then(m => ({ Component: m.LandingPage })),
       },
       {
         path: 'login',
-        element: <Login />,
+        lazy: () => import('./pages/Login').then(m => ({ Component: m.Login })),
       },
       {
         path: 'register',
-        element: <Register />,
+        lazy: () => import('./pages/Register').then(m => ({ Component: m.Register })),
       },
       {
         path: 'shared/:shareId',
-        element: <SharedProject />,
+        lazy: () => import('./pages/SharedProject').then(m => ({ Component: m.SharedProject })),
       },
       {
         path: 'workspace',
-        element: (
-          <ProtectedRoute>
-            <Workspace />
-          </ProtectedRoute>
-        ),
+        element: <ProtectedRoute children={null} />, // We will handle children below or use lazy.
+        children: [
+          {
+            index: true,
+            lazy: () => import('./pages/Workspace').then(m => ({ Component: m.Workspace })),
+          },
+        ],
       },
       {
         path: 'metrics',
-        element: (
-          <ProtectedRoute>
-            <Metrics />
-          </ProtectedRoute>
-        ),
+        element: <ProtectedRoute children={null} />,
+        children: [
+          {
+            index: true,
+            lazy: () => import('./pages/Metrics').then(m => ({ Component: m.Metrics })),
+          },
+        ],
       },
       {
         path: 'dashboard',
-        element: (
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        ),
+        element: <ProtectedRoute children={null} />,
+        children: [
+          {
+            index: true,
+            lazy: () => import('./pages/Dashboard').then(m => ({ Component: m.Dashboard })),
+          },
+        ],
       },
     ],
   },

@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, memo } from 'react';
 
 interface GlassCardProps {
   children: ReactNode;
@@ -6,7 +6,7 @@ interface GlassCardProps {
   hover?: boolean;
 }
 
-export function GlassCard({ children, className = '', hover = true }: GlassCardProps) {
+export const GlassCard = memo(({ children, className = '', hover = true }: GlassCardProps) => {
   return (
     <div
       className={`glass-card rounded-2xl p-6 transition-all duration-300 ${
@@ -16,4 +16,4 @@ export function GlassCard({ children, className = '', hover = true }: GlassCardP
       {children}
     </div>
   );
-}
+});

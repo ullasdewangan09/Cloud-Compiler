@@ -1,0 +1,1 @@
+import{r as t,j as o}from"./index-BNAuqWIF.js";const l=t.memo(({children:r,className:s="",hover:a=!0})=>o.jsx("div",{className:`glass-card rounded-2xl p-6 transition-all duration-300 ${a?"hover:shadow-2xl hover:-translate-y-1":""} ${s}`,children:r}));export{l as G};

@@ -294,9 +294,17 @@ try {
 }
 finally {
     if ($doc) {
-        $doc.Close($false) | Out-Null
+        try {
+            $doc.Close($false) | Out-Null
+        }
+        catch {
+        }
     }
     if ($word) {
-        $word.Quit() | Out-Null
+        try {
+            $word.Quit() | Out-Null
+        }
+        catch {
+        }
     }
 }

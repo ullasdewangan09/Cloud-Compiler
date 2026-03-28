@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from xml.sax.saxutils import escape
 
@@ -16,18 +17,18 @@ PLATFORMS = [
     {
         "name": "Cloud Compiler",
         "language_count": 4,
-        "usability_score": 8.0,
-        "optimization_support_score": 5.0,
-        "debugger": "No",
+        "usability_score": 9.0,
+        "optimization_support_score": 8.0,
+        "debugger": "No built-in step debugger",
         "stdin": "Yes",
-        "sharing": "Partial",
-        "collaboration": "No",
-        "api_embed": "Internal API only",
-        "multi_file": "No",
-        "version_selection": "No",
-        "mobile": "No",
-        "positioning": "Best for managed browser-based execution inside this project.",
-        "source": "Local project analysis + measured benchmark run in reporting/compiler_comparison_results.json",
+        "sharing": "Yes",
+        "collaboration": "Public share links",
+        "api_embed": "Internal authenticated API",
+        "multi_file": "Yes",
+        "version_selection": "Compiler profiles + custom flags",
+        "mobile": "Browser-based (best on desktop)",
+        "positioning": "Best for an observable educational platform with Docker isolation, save/share, multi-file workspaces, and Java Swing browser workflows.",
+        "source": "Local project analysis of the current repository plus measured benchmark data from reporting/compiler_comparison_results.json",
     },
     {
         "name": "Programiz",
@@ -35,7 +36,7 @@ PLATFORMS = [
         "usability_score": 5.5,
         "optimization_support_score": 2.0,
         "debugger": "No visible debugger",
-        "stdin": "Not clearly documented on landing page",
+        "stdin": "Not clearly documented on examined pages",
         "sharing": "Yes",
         "collaboration": "No visible collaboration",
         "api_embed": "No visible API on examined pages",
@@ -111,10 +112,23 @@ PLATFORMS = [
     },
 ]
 
+LANGUAGE_LABELS = {
+    "python": "Python",
+    "c": "C",
+    "cpp": "C++",
+}
+
 
 def load_cloud_latency() -> dict[str, dict[str, float]]:
+    if not RESULTS_JSON.exists():
+        return {
+            "python": {"native": 0.0, "cloud_sync": 0.0, "cloud_async": 0.0},
+            "c": {"native": 0.0, "cloud_sync": 0.0, "cloud_async": 0.0},
+            "cpp": {"native": 0.0, "cloud_sync": 0.0, "cloud_async": 0.0},
+        }
+
     payload = json.loads(RESULTS_JSON.read_text(encoding="utf-8"))
-    results = payload["results"]
+    results = payload.get("results", [])
     grouped: dict[str, dict[str, list[float]]] = {}
     for item in results:
         lang = item["language"]
@@ -135,7 +149,13 @@ def write_svg(path: Path, content: str) -> None:
     path.write_text(content, encoding="utf-8")
 
 
-def simple_bar_chart_svg(title: str, items: list[tuple[str, float]], color: str, max_value: float, x_label: str) -> str:
+def simple_bar_chart_svg(
+    title: str,
+    items: list[tuple[str, float]],
+    color: str,
+    max_value: float,
+    x_label: str,
+) -> str:
     width = 980
     height = 560
     left = 170
@@ -173,7 +193,13 @@ def simple_bar_chart_svg(title: str, items: list[tuple[str, float]], color: str,
     return "\n".join(parts)
 
 
-def grouped_bar_chart_svg(title: str, categories: list[str], series: list[tuple[str, str, list[float]]], max_value: float, y_label: str) -> str:
+def grouped_bar_chart_svg(
+    title: str,
+    categories: list[str],
+    series: list[tuple[str, str, list[float]]],
+    max_value: float,
+    y_label: str,
+) -> str:
     width = 1040
     height = 600
     left = 90
@@ -232,15 +258,15 @@ def build_report(cloud_latency: dict[str, dict[str, float]]) -> str:
         for p in PLATFORMS
     )
 
-    platform_notes = "\n".join(
-        f"- **{p['name']}**: {p['positioning']}"
-        for p in PLATFORMS
+    platform_notes = "\n".join(f"- **{p['name']}**: {p['positioning']}" for p in PLATFORMS)
+    source_rows = "\n".join(f"| {p['name']} | {p['source']} |" for p in PLATFORMS)
+
+    latency_rows = "\n".join(
+        f"| {LANGUAGE_LABELS.get(language, language.title())} | {metrics['native']} | {metrics['cloud_sync']} | {metrics['cloud_async']} |"
+        for language, metrics in sorted(cloud_latency.items())
     )
 
-    source_rows = "\n".join(
-        f"| {p['name']} | {p['source']} |"
-        for p in PLATFORMS
-    )
+    generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
     return f"""# Online Compiler Comparison Report
 
@@ -248,29 +274,45 @@ def build_report(cloud_latency: dict[str, dict[str, float]]) -> str:
 
 This report compares **Cloud Compiler** with **Programiz**, **OnlineGDB**, **JDoodle**, **OneCompiler**, and **Ideone**.
 
-The report is intentionally split into two evidence types:
+The evidence is intentionally split into two categories:
 
-- **Measured results**: real benchmark data for Cloud Compiler versus the locally available native toolchains on this machine.
-- **Documented platform comparison**: feature-based comparison of Programiz and other online compilers using their official product pages and documentation.
+- **Measured internal results**: real benchmark data for Cloud Compiler versus locally available native toolchains on this machine.
+- **Documented external comparison**: feature-based comparison of Programiz and other online compilers using their official product pages already referenced in this workspace.
 
-This separation matters because external browser platforms were not benchmarked through an automated speed test in this workspace, so any direct runtime-speed claim about Programmiz, JDoodle, Ideone, or similar services would be weaker than the measured Cloud Compiler data.
+This keeps the report honest. Cloud Compiler latency is measured. External platform speed is **not** claimed as a measured result here.
+
+Generated from the current repository state on: **{generated_at}**
 
 ## Method
 
 ### Measured optimization data
 
-- Source: local benchmark run already generated in `reporting/compiler_comparison_results.json`
+- Source: `reporting/compiler_comparison_results.json`
 - Languages measured: Python, C, C++
 - Modes measured: native local, Cloud Compiler sync, Cloud Compiler async
 
 ### Documented comparison data
 
-The external platforms were scored on:
+The external platforms were compared on:
 
-- **Usability score (0-10)**: setup simplicity, sharing, input/output flow, collaboration, and accessibility
-- **Optimization-support score (0-10)**: debugger depth, version selection, multi-file support, API/embed options, and advanced execution controls
+- **Usability score (0-10)**: setup simplicity, sharing, workflow breadth, collaboration, and accessibility
+- **Optimization-support score (0-10)**: debugging depth, version selection, multi-file support, API/embed options, and advanced execution controls
 
-These are **feature-support scores**, not raw runtime-speed measurements.
+These scores are **feature-support scores**, not raw runtime-speed measurements.
+
+## What Changed in the Current Cloud Compiler
+
+Compared with the older report version, the current project now includes:
+
+- Multi-file projects with entry-file selection
+- Saved projects and public share links
+- Compiler profiles and custom run flags
+- Structured async status, stdout, stderr, diagnostics, and timing fields
+- Queue wait and latency dashboards
+- Java Swing preview support for normal execution
+- Interactive Java Swing sessions through local noVNC embedding
+
+That means Cloud Compiler should now be evaluated as a broader coding platform rather than as a simple single-file runner.
 
 ## Graphs
 
@@ -304,19 +346,19 @@ These are **feature-support scores**, not raw runtime-speed measurements.
 
 ## What the Graphs Show
 
-### Programmiz versus other online compilers
+### Programiz versus other online compilers
 
-- **Programiz** is easy to use and share, which makes it good for quick learning tasks and short examples.
-- Compared with **OnlineGDB**, **JDoodle**, and **OneCompiler**, Programiz exposes fewer advanced workflow features from the examined product pages.
-- Programiz appears weaker than **OnlineGDB** for debugging, weaker than **JDoodle** for configurable IDE workflows and APIs, and weaker than **OneCompiler** for organizations, embedded editors, and team use.
-- Against **Ideone**, Programiz looks more learning-oriented, while Ideone looks more like a remote execution service with API/widget roots and time-limit controls.
+- **Programiz** still looks strongest as a low-friction learning tool for quick browser runs and easy sharing.
+- Compared with **OnlineGDB**, **JDoodle**, and **OneCompiler**, Programiz exposes fewer advanced workflow features from the examined documentation.
+- Programiz appears weaker than **OnlineGDB** for debugging, weaker than **JDoodle** for configurable IDE workflows and APIs, and weaker than **OneCompiler** for team-style or studio-style usage.
+- Against **Ideone**, Programiz looks more tutorial-oriented, while Ideone looks more like a remote execution utility with API/widget roots.
 
-### Where Cloud Compiler stands
+### Where Cloud Compiler stands now
 
-- **Cloud Compiler** is much narrower in language coverage than Programiz and the larger commercial platforms.
-- Its strongest differentiators are the combination of **browser execution**, **Docker isolation**, **sync plus async execution**, and **built-in worker/queue/system metrics**.
-- In measured latency, Cloud Compiler is slower than native execution, especially in async mode.
-- In managed usability, Cloud Compiler compares surprisingly well because it bundles stdin, output history, import/export, complexity analysis, and admin observability in one project.
+- **Cloud Compiler** still has a smaller language set than the larger commercial platforms.
+- Its platform strengths are now much clearer than before: **Docker isolation**, **sync + async execution**, **save/share**, **multi-file support**, **compiler profiles/flags**, and **observability dashboards**.
+- The Java Swing path is a distinctive capability for a student project because it supports both preview artifacts and interactive browser sessions.
+- In raw speed, Cloud Compiler is still slower than native local execution, especially in async mode. In managed usability, it is much stronger than the earlier single-file version.
 
 ## Cross-Platform Takeaways
 
@@ -326,27 +368,23 @@ These are **feature-support scores**, not raw runtime-speed measurements.
 
 | Language | Native avg (ms) | Cloud sync avg (ms) | Cloud async avg (ms) |
 | --- | --- | --- | --- |
-| Python | {cloud_latency['python']['native']} | {cloud_latency['python']['cloud_sync']} | {cloud_latency['python']['cloud_async']} |
-| C | {cloud_latency['c']['native']} | {cloud_latency['c']['cloud_sync']} | {cloud_latency['c']['cloud_async']} |
-| C++ | {cloud_latency['cpp']['native']} | {cloud_latency['cpp']['cloud_sync']} | {cloud_latency['cpp']['cloud_async']} |
+{latency_rows}
 
 ## Final Interpretation
 
 - If the priority is **fast local execution**, native compilers remain the best baseline.
-- If the priority is **simple browser use for beginners**, Programiz is attractive because of its low-friction interface.
-- If the priority is **debugging and classroom use**, OnlineGDB is stronger than Programiz.
-- If the priority is **enterprise-grade integrations, collaboration, multi-file projects, APIs, and configurable versions**, JDoodle is the strongest documented platform in this comparison.
-- If the priority is **broad browser-based coding with APIs and team workflows**, OneCompiler is also very strong.
-- **Cloud Compiler** is best positioned as a custom, observable, Docker-isolated educational or institutional platform rather than as the fastest compiler service in this group.
+- If the priority is **simple browser use for beginners**, Programiz is still attractive because of its low-friction interface.
+- If the priority is **debugging and classroom use**, OnlineGDB remains stronger than Programiz.
+- If the priority is **enterprise-style integrations, collaboration, multi-file projects, APIs, and configurable versions**, JDoodle remains the strongest documented external platform in this comparison.
+- **Cloud Compiler** now fits best as a custom, observable, browser-based coding platform for institutional, classroom, or showcase use cases rather than as the broadest or fastest compiler service.
 
 ## Recommendations for Your Project
 
-1. Add multi-file project support if you want to compete more directly with JDoodle, OneCompiler, and OnlineGDB.
-2. Add structured async telemetry and queue wait graphs so your observability advantage becomes more visible.
-3. Add compiler version selection and advanced run flags for C, C++, Java, and Python.
-4. Add sharing or saved project links to compete better with Programiz and Ideone.
-5. Add debugger-oriented tooling or richer error grouping if debugging experience is part of your evaluation.
-6. Keep using measured benchmark graphs for your own platform, but describe external platforms using documented features unless you can run controlled benchmarks against them fairly.
+1. Add step-debugging or richer trace tooling if you want to close the gap with debugger-oriented platforms.
+2. Proxy interactive Swing sessions through the backend for production-safe remote access instead of local-only noVNC ports.
+3. Expand compiler-version coverage and language support if broader parity with JDoodle or OneCompiler is a goal.
+4. Add collaborative editing, comments, or instructor review flows if classroom use is part of the product direction.
+5. Continue using measured benchmark graphs for your own platform and keep external platform claims explicitly feature-based unless you run controlled, fair benchmarks.
 
 ## Sources
 
@@ -354,7 +392,7 @@ These are **feature-support scores**, not raw runtime-speed measurements.
 | --- | --- |
 {source_rows}
 
-Local benchmark source:
+Local measured benchmark source:
 
 - `reporting/compiler_comparison_results.json`
 - `reporting/Compiler_Comparison_Final_Report.md`
@@ -368,59 +406,58 @@ def main() -> None:
     write_svg(
         GRAPHS_DIR / "platform_language_count.svg",
         simple_bar_chart_svg(
-            "Supported Language Count Across Platforms",
-            [(p["name"], p["language_count"]) for p in PLATFORMS],
-            "#2563eb",
-            110,
-            "Approximate supported language count from official product pages",
+            "Supported Language Count",
+            [(p["name"], float(p["language_count"])) for p in PLATFORMS],
+            "#0f766e",
+            max(float(p["language_count"]) for p in PLATFORMS),
+            "Number of documented supported languages",
         ),
     )
 
     write_svg(
         GRAPHS_DIR / "platform_usability_score.svg",
         simple_bar_chart_svg(
-            "Usability Score (0-10)",
-            [(p["name"], p["usability_score"]) for p in PLATFORMS],
-            "#16a34a",
+            "Usability Score",
+            [(p["name"], float(p["usability_score"])) for p in PLATFORMS],
+            "#2563eb",
             10,
-            "Feature-based usability score from documented product capabilities",
+            "Usability score out of 10",
         ),
     )
 
     write_svg(
         GRAPHS_DIR / "platform_optimization_support_score.svg",
         simple_bar_chart_svg(
-            "Optimization-Support Score (0-10)",
-            [(p["name"], p["optimization_support_score"]) for p in PLATFORMS],
+            "Optimization-Support Score",
+            [(p["name"], float(p["optimization_support_score"])) for p in PLATFORMS],
             "#ea580c",
             10,
-            "Feature-based score for debugger depth, versions, APIs, multi-file support, and run controls",
+            "Optimization-support score out of 10",
         ),
     )
 
+    languages = [LANGUAGE_LABELS.get(language, language.title()) for language in sorted(cloud_latency)]
     write_svg(
         GRAPHS_DIR / "cloud_compiler_latency.svg",
         grouped_bar_chart_svg(
             "Cloud Compiler Measured Average Latency",
-            ["Python", "C", "C++"],
+            languages,
             [
-                ("Native local", "#1d4ed8", [cloud_latency["python"]["native"], cloud_latency["c"]["native"], cloud_latency["cpp"]["native"]]),
-                ("Cloud sync", "#059669", [cloud_latency["python"]["cloud_sync"], cloud_latency["c"]["cloud_sync"], cloud_latency["cpp"]["cloud_sync"]]),
-                ("Cloud async", "#dc2626", [cloud_latency["python"]["cloud_async"], cloud_latency["c"]["cloud_async"], cloud_latency["cpp"]["cloud_async"]]),
+                ("Native", "#0f766e", [cloud_latency[lang]["native"] for lang in sorted(cloud_latency)]),
+                ("Cloud Sync", "#2563eb", [cloud_latency[lang]["cloud_sync"] for lang in sorted(cloud_latency)]),
+                ("Cloud Async", "#ea580c", [cloud_latency[lang]["cloud_async"] for lang in sorted(cloud_latency)]),
             ],
             max(
-                cloud_latency["python"]["cloud_async"],
-                cloud_latency["c"]["cloud_async"],
-                cloud_latency["cpp"]["cloud_async"],
+                [value for metrics in cloud_latency.values() for value in metrics.values()],
+                default=1,
             )
-            * 1.15,
+            * 1.1,
             "Average latency (ms)",
         ),
     )
 
     OUTPUT_MD.write_text(build_report(cloud_latency), encoding="utf-8")
-    print(f"Generated report: {OUTPUT_MD}")
-    print(f"Generated graphs in: {GRAPHS_DIR}")
+    print(f"Saved report to {OUTPUT_MD}")
 
 
 if __name__ == "__main__":

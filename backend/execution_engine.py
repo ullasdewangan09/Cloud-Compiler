@@ -124,9 +124,9 @@ def prepare_execution_request(payload: dict) -> PreparedExecution:
 
 def _standard_flag(language: str, profile: str) -> str:
     if language == "c":
-        return f"-std={profile}"
+        return f"-std={profile} -O2"
     if language == "cpp":
-        return f"-std={profile}"
+        return f"-std={profile} -O2"
     return ""
 
 

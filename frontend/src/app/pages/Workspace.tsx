@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   BarChart3,
   Download,
@@ -83,20 +83,45 @@ export function Workspace() {
     notes: string[];
   } | null>(null);
 
-  const activeFile = files.find((file) => file.filename === activeFileName) ?? files[0];
+  const activeFile = useMemo(() => 
+    files.find((file) => file.filename === activeFileName) ?? files[0],
+    [files, activeFileName]
+  );
 
-  useEffect(() => {
-    void loadProjects();
+  const loadProjects = useCallback(async () => {
+    setLoadingProjects(true);
+    try {
+      const projects = await apiService.listProjects();
+      setSavedProjects(projects);
+    } catch (err: any) {
+      toast.error('Failed to load saved projects: ' + err.message);
+    } finally {
+      setLoadingProjects(false);
+    }
   }, []);
 
-  useEffect(() => {
-    if (!files.some((file) => file.filename === activeFileName) && files[0]) {
-      setActiveFileName(files[0].filename);
+  const handleLanguageChange = useCallback((newLanguage: string) => {
+    if (interactiveSession?.session_id) {
+      void apiService.stopInteractiveJavaSession(interactiveSession.session_id).catch(() => undefined);
     }
-    if (!files.some((file) => file.filename === entryFile) && files[0]) {
-      setEntryFile(files[0].filename);
-    }
-  }, [files, activeFileName, entryFile]);
+    setLanguage(newLanguage);
+    const nextFiles = createDefaultFiles(newLanguage);
+    setFiles(nextFiles);
+    setActiveFileName(nextFiles[0].filename);
+    setEntryFile(nextFiles[0].filename);
+    setCompilerProfile(PROFILE_OPTIONS[newLanguage][0]);
+    setCompilerFlags('');
+    setComplexity(null);
+    setInteractiveSession(null);
+  }, [interactiveSession?.session_id]);
+
+  const handleActiveFileChange = useCallback((value: string) => {
+    setFiles((prev) =>
+      prev.map((file) =>
+        file.filename === activeFileName ? { ...file, content: value } : file
+      )
+    );
+  }, [activeFileName]);
 
   useEffect(() => {
     if (!interactiveSession?.session_id) {
@@ -117,42 +142,20 @@ export function Workspace() {
     return () => window.clearInterval(interval);
   }, [interactiveSession?.session_id]);
 
-  const loadProjects = async () => {
-    setLoadingProjects(true);
-    try {
-      const projects = await apiService.listProjects();
-      setSavedProjects(projects);
-    } catch (err: any) {
-      toast.error('Failed to load saved projects: ' + err.message);
-    } finally {
-      setLoadingProjects(false);
+  useEffect(() => {
+    void loadProjects();
+  }, [loadProjects]);
+
+  useEffect(() => {
+    if (!files.some((file) => file.filename === activeFileName) && files[0]) {
+      setActiveFileName(files[0].filename);
     }
-  };
-
-  const handleLanguageChange = (newLanguage: string) => {
-    if (interactiveSession?.session_id) {
-      void apiService.stopInteractiveJavaSession(interactiveSession.session_id).catch(() => undefined);
+    if (!files.some((file) => file.filename === entryFile) && files[0]) {
+      setEntryFile(files[0].filename);
     }
-    setLanguage(newLanguage);
-    const nextFiles = createDefaultFiles(newLanguage);
-    setFiles(nextFiles);
-    setActiveFileName(nextFiles[0].filename);
-    setEntryFile(nextFiles[0].filename);
-    setCompilerProfile(PROFILE_OPTIONS[newLanguage][0]);
-    setCompilerFlags('');
-    setComplexity(null);
-    setInteractiveSession(null);
-  };
+  }, [files, activeFileName, entryFile]);
 
-  const handleActiveFileChange = (value: string) => {
-    setFiles((prev) =>
-      prev.map((file) =>
-        file.filename === activeFileName ? { ...file, content: value } : file
-      )
-    );
-  };
-
-  const handleAddFile = () => {
+  const handleAddFile = useCallback(() => {
     const filename = window.prompt('Enter a new filename', `helper_${files.length + 1}.txt`);
     if (!filename) return;
     const safeName = filename.trim();
@@ -164,9 +167,9 @@ export function Workspace() {
     const nextFile = { filename: safeName, content: '' };
     setFiles((prev) => [...prev, nextFile]);
     setActiveFileName(nextFile.filename);
-  };
+  }, [files.length, files]);
 
-  const handleRemoveFile = (filename: string) => {
+  const handleRemoveFile = useCallback((filename: string) => {
     if (files.length === 1) {
       toast.error('At least one file is required.');
       return;
@@ -179,9 +182,9 @@ export function Workspace() {
     if (entryFile === filename) {
       setEntryFile(nextFiles[0].filename);
     }
-  };
+  }, [files, activeFileName, entryFile]);
 
-  const buildExecutionPayload = (): ExecutionRequest => {
+  const buildExecutionPayload = useCallback((): ExecutionRequest => {
     const sanitizedFiles = files.map((file) => ({
       filename: file.filename,
       content: sanitizeCodeText(file.content),
@@ -197,9 +200,9 @@ export function Workspace() {
       compiler_flags: compilerFlags,
       code: sanitizedFiles.find((file) => file.filename === entryFile)?.content || '',
     };
-  };
+  }, [files, language, stdin, entryFile, compilerProfile, compilerFlags]);
 
-  const addToHistory = (executionResult: ExecutionResponse) => {
+  const addToHistory = useCallback((executionResult: ExecutionResponse) => {
     const newItem: HistoryItem = {
       id: `${Date.now()}`,
       language,
@@ -219,9 +222,9 @@ export function Workspace() {
       result: executionResult,
     };
     setHistory((prev) => [newItem, ...prev].slice(0, 20));
-  };
+  }, [language, files, entryFile, compilerProfile, compilerFlags]);
 
-  const handleRunAsync = async () => {
+  const handleRunAsync = useCallback(async () => {
     const payload = buildExecutionPayload();
 
     setStatus('submitted');
@@ -267,9 +270,9 @@ export function Workspace() {
       setStatus('system_error');
       toast.error('Failed to submit code for execution');
     }
-  };
+  }, [buildExecutionPayload, addToHistory]);
 
-  const handleRunSync = async () => {
+  const handleRunSync = useCallback(async () => {
     const payload = buildExecutionPayload();
     setStatus('running');
     setResult(null);
@@ -292,9 +295,9 @@ export function Workspace() {
       setStatus('system_error');
       toast.error('Synchronous execution failed');
     }
-  };
+  }, [buildExecutionPayload, addToHistory]);
 
-  const handleRunInteractive = async () => {
+  const handleRunInteractive = useCallback(async () => {
     if (language !== 'java') {
       toast.error('Interactive mode is only available for Java Swing.');
       return;
@@ -324,9 +327,9 @@ export function Workspace() {
     } finally {
       setLaunchingInteractive(false);
     }
-  };
+  }, [language, buildExecutionPayload, interactiveSession?.session_id]);
 
-  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -349,9 +352,9 @@ export function Workspace() {
     } catch (err: any) {
       toast.error('Failed to import file: ' + err.message);
     }
-  };
+  }, []);
 
-  const handleExportFile = async (type: 'code' | 'pdf' = 'code') => {
+  const handleExportFile = useCallback(async (type: 'code' | 'pdf' = 'code') => {
     try {
       const safeBaseName = (exportFilename || 'main').trim() || 'main';
       const currentCode = sanitizeCodeText(activeFile?.content || '');
@@ -372,9 +375,9 @@ export function Workspace() {
     } catch (err: any) {
       toast.error('Failed to export file: ' + err.message);
     }
-  };
+  }, [exportFilename, activeFile, language]);
 
-  const handleAnalyzeComplexity = async () => {
+  const handleAnalyzeComplexity = useCallback(async () => {
     const currentCode = sanitizeCodeText(activeFile?.content || '');
     if (!currentCode.trim()) {
       toast.error('Write code before analyzing complexity');
@@ -391,9 +394,9 @@ export function Workspace() {
     } finally {
       setAnalyzingComplexity(false);
     }
-  };
+  }, [activeFile, language]);
 
-  const handleSelectHistory = (item: HistoryItem) => {
+  const handleSelectHistory = useCallback((item: HistoryItem) => {
     if (interactiveSession?.session_id) {
       void apiService.stopInteractiveJavaSession(interactiveSession.session_id).catch(() => undefined);
       setInteractiveSession(null);
@@ -409,9 +412,9 @@ export function Workspace() {
     setResult(item.result || null);
     setOutput(item.output);
     setStatus(item.status);
-  };
+  }, [interactiveSession?.session_id]);
 
-  const applyProject = (project: SavedProject) => {
+  const applyProject = useCallback((project: SavedProject) => {
     if (interactiveSession?.session_id) {
       void apiService.stopInteractiveJavaSession(interactiveSession.session_id).catch(() => undefined);
       setInteractiveSession(null);
@@ -429,9 +432,9 @@ export function Workspace() {
     setResult(null);
     setStatus('idle');
     toast.success(`Loaded ${project.name}`);
-  };
+  }, [interactiveSession?.session_id]);
 
-  const buildProjectPayload = (isPublic: boolean): SaveProjectRequest => ({
+  const buildProjectPayload = useCallback((isPublic: boolean): SaveProjectRequest => ({
     name: projectName.trim() || 'Untitled Project',
     language,
     input: stdin,
@@ -440,9 +443,9 @@ export function Workspace() {
     compiler_profile: compilerProfile,
     compiler_flags: compilerFlags,
     is_public: isPublic,
-  });
+  }), [projectName, language, stdin, files, entryFile, compilerProfile, compilerFlags]);
 
-  const handleSaveProject = async (isPublic = false) => {
+  const handleSaveProject = useCallback(async (isPublic = false) => {
     setSavingProject(true);
     try {
       const payload = buildProjectPayload(isPublic);
@@ -466,9 +469,9 @@ export function Workspace() {
     } finally {
       setSavingProject(false);
     }
-  };
+  }, [projectId, buildProjectPayload, loadProjects]);
 
-  const handleShareProject = async () => {
+  const handleShareProject = useCallback(async () => {
     try {
       if (!projectId) {
         await handleSaveProject(true);
@@ -489,15 +492,15 @@ export function Workspace() {
     } catch (err: any) {
       toast.error('Failed to generate share link: ' + err.message);
     }
-  };
+  }, [projectId, savedProjects, handleSaveProject, loadProjects]);
 
-  const handleClearOutput = () => {
+  const handleClearOutput = useCallback(() => {
     setOutput('');
     setResult(null);
     setStatus('idle');
-  };
+  }, []);
 
-  const handleStopInteractive = async () => {
+  const handleStopInteractive = useCallback(async () => {
     if (!interactiveSession?.session_id) {
       return;
     }
@@ -512,14 +515,14 @@ export function Workspace() {
     } finally {
       setStoppingInteractive(false);
     }
-  };
+  }, [interactiveSession?.session_id]);
 
   return (
     <div className="min-h-screen p-6">
       <div className="max-w-[1880px] mx-auto">
         <div className="mb-6 space-y-4">
           <div className="flex flex-wrap items-center gap-3">
-            {[
+            {[ 
               { value: 'python', label: 'Python' },
               { value: 'c', label: 'C' },
               { value: 'cpp', label: 'C++' },
@@ -528,11 +531,10 @@ export function Workspace() {
               <button
                 key={lang.value}
                 onClick={() => handleLanguageChange(lang.value)}
-                className={`px-5 py-2.5 rounded-full text-sm font-semibold border transition-all ${
-                  language === lang.value
+                className={`px-5 py-2.5 rounded-full text-sm font-semibold border transition-all ${language === lang.value
                     ? 'bg-sky-200/45 text-sky-700 border-sky-400/70 shadow-[0_8px_20px_rgba(56,189,248,0.22)]'
                     : 'bg-slate-900/75 text-slate-100 border-slate-700/85 hover:bg-slate-800/85 hover:border-slate-500'
-                }`}
+                  }`}
               >
                 {lang.label}
               </button>
@@ -543,7 +545,7 @@ export function Workspace() {
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
               placeholder="Project name"
-              className="h-11 min-w-52 rounded-full border border-divider-subtle bg-surface/70 px-4 text-sm font-semibold text-text outline-none transition-all focus:border-sky/40 focus:ring-2 focus:ring-sky/25"
+              className="h-11 min-w-52 rounded-full border border-divider-subtle bg-surface/70 px-4 text-sm font-semibold text-text outline-none transition-all sm:ml-auto focus:border-sky/40 focus:ring-2 focus:ring-sky/25"
             />
             <button
               onClick={() => void handleSaveProject(false)}
@@ -560,6 +562,8 @@ export function Workspace() {
               <Share2 className="w-4 h-4" />
               <span className="text-sm font-medium">Share</span>
             </button>
+
+            <div className="w-px h-6 bg-divider-subtle mx-1" />
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
@@ -597,12 +601,12 @@ export function Workspace() {
               value={exportFilename}
               onChange={(e) => setExportFilename(e.target.value)}
               placeholder="main"
-              className="h-11 w-32 rounded-full border border-divider-subtle bg-surface/70 px-4 text-sm font-semibold text-text outline-none transition-all focus:border-sky/40 focus:ring-2 focus:ring-sky/25"
+              className="h-11 w-32 rounded-full border border-divider-subtle bg-surface/70 px-4 text-sm font-semibold text-text outline-none transition-all sm:ml-auto focus:border-sky/40 focus:ring-2 focus:ring-sky/25"
               title="Filename for export"
             />
             <label className="glass-button px-4 py-2.5 rounded-xl cursor-pointer flex items-center gap-2">
               <Upload className="w-4 h-4" />
-              <span className="text-sm font-medium">Import</span>
+              <span className="text-sm font-medium">Import File</span>
               <input type="file" onChange={handleImportFile} className="hidden" accept=".py,.c,.cpp,.java,.txt,.h,.hpp" />
             </label>
             <button onClick={() => handleExportFile('code')} className="glass-button px-4 py-2.5 rounded-xl flex items-center gap-2">
@@ -657,11 +661,7 @@ export function Workspace() {
             ) : null}
           </div>
 
-          {language === 'java' ? (
-            <div className="rounded-2xl border border-amber-400/30 bg-amber-200/20 px-4 py-3 text-sm text-amber-900">
-              Java Swing now supports an interactive browser session. Use `Run Interactive` for live input, or keep using sync/async runs when you want logs and preview artifacts.
-            </div>
-          ) : null}
+
         </div>
 
         <div className="grid grid-cols-12 gap-6">
@@ -670,11 +670,10 @@ export function Workspace() {
               {files.map((file) => (
                 <div
                   key={file.filename}
-                  className={`flex items-center gap-2 rounded-full border px-3 py-2 text-sm ${
-                    file.filename === activeFileName
+                  className={`flex items-center gap-2 rounded-full border px-3 py-2 text-sm ${file.filename === activeFileName
                       ? 'border-sky-400/70 bg-sky-200/30 text-sky-700'
                       : 'border-divider-subtle bg-surface-solid text-text-secondary'
-                  }`}
+                    }`}
                 >
                   <button onClick={() => setActiveFileName(file.filename)}>{file.filename}</button>
                   {files.length > 1 ? (

@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { AlertTriangle, CheckCircle2, Clock, Loader2, Terminal, Trash2, XCircle } from 'lucide-react';
 
 import { GlassCard } from './GlassCard';
@@ -22,7 +23,7 @@ interface OutputPanelProps {
   onClear: () => void;
 }
 
-export function OutputPanel({ output, status, result, onClear }: OutputPanelProps) {
+export const OutputPanel = memo(({ output, status, result, onClear }: OutputPanelProps) => {
   const getStatusConfig = () => {
     switch (status) {
       case 'submitted':
@@ -153,9 +154,9 @@ export function OutputPanel({ output, status, result, onClear }: OutputPanelProp
       </div>
     </GlassCard>
   );
-}
+});
 
-function PreviewSection({
+const PreviewSection = memo(({
   artifact,
 }: {
   artifact: {
@@ -164,7 +165,7 @@ function PreviewSection({
     base64_data: string;
     description?: string;
   };
-}) {
+}) => {
   return (
     <div className="rounded-xl border border-divider-subtle bg-surface p-3">
       <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary mb-2">{artifact.label}</p>
@@ -178,18 +179,18 @@ function PreviewSection({
       />
     </div>
   );
-}
+});
 
-function TimingCard({ label, value }: { label: string; value: number | null | undefined }) {
+const TimingCard = memo(({ label, value }: { label: string; value: number | null | undefined }) => {
   return (
     <div className="rounded-lg border border-divider-subtle bg-surface px-3 py-2">
       <p className="text-[11px] uppercase tracking-wide text-text-tertiary">{label}</p>
       <p className="text-sm font-semibold text-text">{value == null ? 'N/A' : `${value.toFixed(2)} ms`}</p>
     </div>
   );
-}
+});
 
-function OutputSection({
+const OutputSection = memo(({
   title,
   value,
   isError = false,
@@ -197,7 +198,7 @@ function OutputSection({
   title: string;
   value: string;
   isError?: boolean;
-}) {
+}) => {
   return (
     <div>
       <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${isError ? 'text-status-error' : 'text-text-secondary'}`}>
@@ -210,4 +211,4 @@ function OutputSection({
       />
     </div>
   );
-}
+});

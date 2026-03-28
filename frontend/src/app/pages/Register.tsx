@@ -12,6 +12,7 @@ import {
   Eye,
   EyeOff,
   Cuboid,
+  ArrowLeft,
 } from 'lucide-react';
 
 export function Register() {
@@ -78,6 +79,11 @@ export function Register() {
 
         <div className="auth-ref-panel-wrap">
           <div className="auth-ref-panel">
+            <Link to="/" className="auth-ref-back">
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to home</span>
+            </Link>
+
             <div className="auth-ref-brand">
               <Cuboid className="w-4 h-4" />
               <span>VeloQube | Cloud Compiler</span>

@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Keyboard } from 'lucide-react';
 import { GlassCard } from './GlassCard';
 
@@ -6,7 +7,7 @@ interface StdinInputProps {
   onChange: (value: string) => void;
 }
 
-export function StdinInput({ value, onChange }: StdinInputProps) {
+export const StdinInput = memo(({ value, onChange }: StdinInputProps) => {
   return (
     <GlassCard className="h-full">
       <div className="flex items-center gap-2 mb-3">
@@ -21,4 +22,4 @@ export function StdinInput({ value, onChange }: StdinInputProps) {
       />
     </GlassCard>
   );
-}
+});

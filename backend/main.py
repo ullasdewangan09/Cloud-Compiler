@@ -3,6 +3,7 @@ import threading
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 
 from autoscaler.autoscaler import autoscaler_loop
 from auth_routes import router as auth_router
@@ -37,6 +38,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 # ✅ Create database tables
 Base.metadata.create_all(bind=engine)

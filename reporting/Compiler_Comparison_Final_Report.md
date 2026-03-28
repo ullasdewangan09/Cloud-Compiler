@@ -7,8 +7,8 @@ This report presents a measured comparison between the current Cloud Compiler im
 Compared systems:
 
 - Native local execution using `py -3`, `gcc`, and `g++`.
-- Cloud Compiler synchronous execution using `backend/autoscaler/docker_manager.py`.
-- Cloud Compiler asynchronous execution using Redis plus `worker/worker.py`.
+- Cloud Compiler synchronous execution using `backend.execution_engine.execute_in_docker`.
+- Cloud Compiler asynchronous execution using Redis plus `worker/worker.py` with structured job telemetry.
 
 Languages benchmarked:
 
@@ -18,17 +18,30 @@ Languages benchmarked:
 
 Language not benchmarked:
 
-- Java, because a native local `javac` / `java` baseline was not available on this machine during the test run.
+- Java, because a native local `javac` / `java` baseline was not available on this machine during the measured run.
+
+## Current Project Context
+
+The comparison should be interpreted against the project as it exists now, not the earlier prototype. The current Cloud Compiler includes:
+
+- Multi-file projects with entry-file selection.
+- Saved projects and public share links.
+- Compiler profiles and custom compiler flags.
+- Structured async status, stdout, stderr, diagnostics, and timing fields.
+- Queue, worker, and latency dashboards.
+- Java Swing preview artifacts for normal runs.
+- Interactive Java Swing sessions through local noVNC embedding.
 
 ## Test Environment
 
-- Date: 2026-03-28 16:58:37
+- Date (UTC): 2026-03-28 19:49:50
 - Host Python launcher: `C:\Users\dewan\AppData\Local\Programs\Python\Launcher\py.EXE`
 - Local GCC: `C:\MinGW\bin\gcc.EXE`
 - Local G++: `C:\MinGW\bin\g++.EXE`
-- Benchmark virtualenv Python: `C:\Users\dewan\Programming Projects\Cloud Compiler\.venv\Scripts\python.exe`
+- Benchmark Python: `C:\Users\dewan\Programming Projects\Cloud Compiler\.venv\Scripts\python.exe`
+- Worker Python: `C:\Users\dewan\Programming Projects\Cloud Compiler\.venv\Scripts\python.exe`
 - Docker Desktop: available and used for sync and async cloud execution.
-- Redis: started in Docker for async queue benchmarking.
+- Redis: started in Docker for async queue benchmarking when needed.
 - Runs per benchmark case: 5
 
 ## Method
@@ -47,86 +60,87 @@ Each case was executed five times in each mode. Reported latency values are wall
 
 | Language | Benchmark | Mode | Avg (ms) | Median (ms) | P95 (ms) | Success Rate |
 | --- | --- | --- | --- | --- | --- | --- |
-| python | hello_world | Native local | 73.93 | 73.72 | 82.28 | 100.0% |
-| python | hello_world | Cloud sync | 878.94 | 866.76 | 988.38 | 100.0% |
-| python | hello_world | Cloud async | 1830.82 | 1781.71 | 2196.99 | 100.0% |
-| python | cpu_loop | Native local | 172.73 | 162.54 | 231.0 | 100.0% |
-| python | cpu_loop | Cloud sync | 957.17 | 906.91 | 1182.67 | 100.0% |
-| python | cpu_loop | Cloud async | 1811.93 | 1875.97 | 2451.89 | 100.0% |
-| python | input_sort | Native local | 120.77 | 97.18 | 222.1 | 100.0% |
-| python | input_sort | Cloud sync | 868.94 | 855.2 | 1066.68 | 100.0% |
-| python | input_sort | Cloud async | 1777.58 | 1781.75 | 2269.65 | 100.0% |
-| c | hello_world | Native local | 622.54 | 503.97 | 866.23 | 100.0% |
-| c | hello_world | Cloud sync | 1088.8 | 1093.96 | 1269.62 | 100.0% |
-| c | hello_world | Cloud async | 1743.98 | 1906.6 | 2315.41 | 100.0% |
-| c | cpu_loop | Native local | 968.89 | 958.25 | 1150.5 | 100.0% |
-| c | cpu_loop | Cloud sync | 1030.29 | 972.31 | 1294.04 | 100.0% |
-| c | cpu_loop | Cloud async | 1691.77 | 1865.1 | 1925.38 | 100.0% |
-| c | input_sort | Native local | 502.4 | 458.01 | 723.83 | 100.0% |
-| c | input_sort | Cloud sync | 947.11 | 810.33 | 1221.43 | 100.0% |
-| c | input_sort | Cloud async | 1617.01 | 1820.03 | 1839.44 | 100.0% |
-| cpp | hello_world | Native local | 898.14 | 815.25 | 1242.99 | 100.0% |
-| cpp | hello_world | Cloud sync | 1332.32 | 1348.64 | 1378.27 | 100.0% |
-| cpp | hello_world | Cloud async | 2807.41 | 2761.88 | 3064.96 | 100.0% |
-| cpp | cpu_loop | Native local | 723.31 | 690.36 | 816.61 | 100.0% |
-| cpp | cpu_loop | Cloud sync | 1539.54 | 1599.2 | 1880.66 | 100.0% |
-| cpp | cpu_loop | Cloud async | 2843.13 | 2834.18 | 3517.97 | 100.0% |
-| cpp | input_sort | Native local | 2020.06 | 2139.38 | 2216.96 | 100.0% |
-| cpp | input_sort | Cloud sync | 1791.24 | 1505.52 | 2536.92 | 100.0% |
-| cpp | input_sort | Cloud async | 3189.06 | 3217.54 | 3809.23 | 100.0% |
+| python | hello_world | Native local | 259.79 | 248.93 | 320.12 | 100.0% |
+| python | hello_world | Cloud sync | 1505.11 | 1401.36 | 1762.09 | 100.0% |
+| python | hello_world | Cloud async | 2625.39 | 2618.09 | 3185.04 | 100.0% |
+| python | cpu_loop | Native local | 372.22 | 330.72 | 495.31 | 100.0% |
+| python | cpu_loop | Cloud sync | 1517.1 | 1487.59 | 1661.21 | 100.0% |
+| python | cpu_loop | Cloud async | 2488.5 | 2778.59 | 2846.85 | 100.0% |
+| python | input_sort | Native local | 269.76 | 224.71 | 403.35 | 100.0% |
+| python | input_sort | Cloud sync | 1614.63 | 1680.8 | 1798.32 | 100.0% |
+| python | input_sort | Cloud async | 2487.97 | 2607.81 | 2916.51 | 100.0% |
+| c | hello_world | Native local | 87.02 | 31.57 | 250.02 | 100.0% |
+| c | hello_world | Cloud sync | 1620.74 | 1624.58 | 1799.01 | 100.0% |
+| c | hello_world | Cloud async | 2612.81 | 2742.94 | 2885.03 | 100.0% |
+| c | cpu_loop | Native local | 183.41 | 37.45 | 619.81 | 100.0% |
+| c | cpu_loop | Cloud sync | 1581.84 | 1547.02 | 1867.72 | 100.0% |
+| c | cpu_loop | Cloud async | 2572.53 | 2687.86 | 3020.9 | 100.0% |
+| c | input_sort | Native local | 72.32 | 36.81 | 193.9 | 100.0% |
+| c | input_sort | Cloud sync | 1679.81 | 1663.41 | 1900.44 | 100.0% |
+| c | input_sort | Cloud async | 2516.06 | 2655.51 | 2704.78 | 100.0% |
+| cpp | hello_world | Native local | 112.5 | 33.18 | 358.39 | 100.0% |
+| cpp | hello_world | Cloud sync | 2701.47 | 2606.05 | 3181.77 | 100.0% |
+| cpp | hello_world | Cloud async | 4003.18 | 4008.08 | 4387.33 | 100.0% |
+| cpp | cpu_loop | Native local | 98.75 | 60.81 | 213.74 | 100.0% |
+| cpp | cpu_loop | Cloud sync | 2349.99 | 2284.65 | 2614.68 | 100.0% |
+| cpp | cpu_loop | Cloud async | 3976.88 | 4091.32 | 4420.41 | 100.0% |
+| cpp | input_sort | Native local | 70.61 | 29.6 | 192.93 | 100.0% |
+| cpp | input_sort | Cloud sync | 3086.6 | 3136.77 | 3476.61 | 100.0% |
+| cpp | input_sort | Cloud async | 4903.79 | 4550.57 | 5807.63 | 100.0% |
 
 ### Language-Level Average Latency
 
 | Language | Native Avg (ms) | Cloud Sync Avg (ms) | Cloud Async Avg (ms) |
 | --- | --- | --- | --- |
-| c | 697.94 | 1022.07 | 1684.25 |
-| cpp | 1213.84 | 1554.37 | 2946.53 |
-| python | 122.48 | 901.68 | 1806.78 |
+| c | 114.25 | 1627.46 | 2567.13 |
+| cpp | 93.95 | 2712.69 | 4294.62 |
+| python | 300.59 | 1545.61 | 2533.95 |
 
 ### Optimization Interpretation
 
-- Native local execution was generally the fastest path because it avoids container startup, bind mounts, queueing, and Redis polling.
-- Cloud sync execution was usually slower than native execution, but it provided the closest cloud experience to an immediate 'Run' action.
-- Cloud async execution was the slowest mode because it includes queue submission, worker polling, and the worker loop delay in addition to container startup.
-- Some native C and C++ averages showed large outliers on Windows, so the median values are often a better indicator of steady-state local performance than the raw average alone.
-- All reported success rates should be read as execution correctness on the chosen benchmarks, not as a full reliability guarantee across all programs.
+- Native local execution remains the performance winner because it avoids Docker startup, bind mounts, queueing, and Redis polling.
+- Cloud sync is the fastest managed mode in this project and best reflects the immediate browser workflow.
+- Cloud async is slower, but that cost now buys more observability and safer decoupling than the earlier prototype offered.
+- The current async path is no longer a blind fire-and-forget queue. It preserves structured status, timings, diagnostics, and output fields, which makes the slower path easier to reason about operationally.
+- Results should be read as end-to-end user-visible latency rather than isolated compiler-only runtime.
 
 ## Efficient Usability Comparison
 
 | Criterion | Cloud Compiler (1-5) | Native Toolchain (1-5) | Basis |
 | --- | --- | --- | --- |
-| Setup effort for end users | 5 | 2 | Browser-based access removes local compiler installation for users. |
-| Execution flexibility | 5 | 3 | Cloud Compiler provides both synchronous and asynchronous execution paths. |
-| Input and output workflow | 5 | 3 | Workspace includes stdin, output history, import/export, and PDF export. |
-| Operational visibility | 5 | 1 | Queue, worker, and system metrics are built into the platform. |
-| Performance immediacy | 3 | 5 | Native execution avoids Docker, Redis, and polling overhead. |
-| Error clarity | 3 | 4 | Native toolchains return direct compiler/runtime errors; async path currently stores output as raw text only. |
+| Setup effort for end users | 5 | 2 | Cloud Compiler stays browser-first, while native use still requires separate local toolchain setup. |
+| Workflow breadth | 5 | 2 | The current workspace supports multi-file projects, entry-file selection, save/share, compiler profiles, and compiler flags. |
+| Execution flexibility | 5 | 3 | Cloud Compiler offers synchronous, asynchronous, and Java Swing interactive execution flows. |
+| Operational visibility | 5 | 1 | Queue metrics, worker heartbeat data, timing telemetry, and dashboard views are built into the platform. |
+| Sharing and reproducibility | 5 | 2 | Saved projects and public share links make it easier to reopen or review exactly the same code state. |
+| Diagnostics quality | 4 | 4 | Both paths expose compiler/runtime output, while Cloud Compiler now also returns structured diagnostics and timing fields. |
+| Performance immediacy | 3 | 5 | Native execution still avoids queueing, Redis polling, bind mounts, and container startup overhead. |
 
-Overall usability score: Cloud Compiler `26/30`, Native toolchain `18/30`.
+Overall usability score: Cloud Compiler `32/35`, Native toolchain `19/35`.
 
 ### Usability Interpretation
 
-- Cloud Compiler is clearly stronger for end-user accessibility because the user only needs a browser-facing interface rather than separate local compiler installation and configuration.
-- Native toolchains are stronger for immediate performance and direct low-level error feedback.
-- Cloud Compiler offers better operational usability for teaching, demos, or managed environments because it includes queue monitoring, worker visibility, stdin handling, export features, and a shared UI.
-- The current async result model reduces usability quality because compile errors, runtime errors, and timeouts are not stored as structured result objects.
+- Cloud Compiler is now materially stronger than a plain native toolchain for managed coursework, demos, and platform-style workflows because it combines execution, persistence, sharing, and observability in one UI.
+- Native toolchains still win on raw responsiveness and unrestricted local debugging.
+- The project's current usability advantage is broader than in the earlier report because multi-file projects, saved work, public sharing, compiler profiles, and structured diagnostics are already implemented.
+- Java Swing support adds a differentiator that native CLI benchmarking does not capture well: browser-accessible GUI preview and interactive GUI sessions.
 
 ## Key Findings
 
-- For optimization, native execution is the performance winner.
-- For managed usability, Cloud Compiler is the usability winner.
-- Cloud sync is the best balance inside this project when low latency matters.
-- Cloud async is the right architecture for scale, but it currently pays a noticeable latency cost and needs better telemetry.
+- For optimization, native execution is still the performance winner.
+- For managed usability, the current Cloud Compiler is stronger than before because the feature set is no longer limited to single-file execution.
+- Cloud sync is the best balance when fast feedback matters inside the platform.
+- Cloud async is no longer merely a scaling path. It is also the project's observable, telemetry-rich execution path.
 
-## Project Improvements Recommended from the Measured Comparison
+## Improvement Priorities From the Current Comparison
 
-1. Store structured async results with `status`, `stdout`, `stderr`, `submitted_at`, `started_at`, `finished_at`, and `total_time_ms`.
-2. Move async worker execution into a per-job temporary directory instead of the shared `worker/` working directory.
-3. Add queue wait time and execution time metrics to the monitoring API and frontend charts.
-4. Fix misleading metrics labels so charts reflect real execution metrics rather than host CPU and memory under execution-time labels.
-5. Add a reusable benchmark endpoint or admin-only benchmark runner so future comparisons can be repeated automatically.
-6. Externalize secrets and deployment configuration before production use.
+1. Reduce cold-start overhead with container prewarming, image slimming, or compile-result caching.
+2. Add remote-safe proxying and authorization for interactive Swing sessions instead of exposing local-only noVNC ports.
+3. Expand the compiler-version matrix beyond the current profile set and add more languages if broader platform parity is a goal.
+4. Add debugger-oriented features such as grouped stack traces, breakpoint-friendly integrations, or richer runtime trace capture.
+5. Add automated benchmark workflows that also measure Java once a native baseline is available on the host.
+6. Add quota controls, audit logging, and CI-backed regression tests for save/share, async execution, and telemetry.
 
 ## Conclusion
 
-The measured comparison shows that Cloud Compiler should not be presented as faster than native compilers. Its real strength is efficient usability: centralized access, sandboxed execution, dual sync and async workflows, and built-in observability. If the project adds structured timing telemetry and improves the async execution path, it will be much better positioned for rigorous optimization comparisons in future evaluations.
+The updated comparison shows that Cloud Compiler should still not be presented as faster than native compilers. Its strength is a managed execution experience: browser access, isolated runners, multi-file projects, save/share support, structured telemetry, and specialized Java Swing workflows. In its current state, the project is best positioned as an observable educational or institutional coding platform rather than as a raw speed competitor to native local compilers.
