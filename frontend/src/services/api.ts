@@ -263,6 +263,11 @@ class ApiService {
     return response.data;
   }
 
+  async deleteProject(projectId: number) {
+    const response = await this.api.delete(`/projects/${projectId}`);
+    return response.data;
+  }
+
   async getRoot() {
     const response = await this.api.get('/');
     return response.data;

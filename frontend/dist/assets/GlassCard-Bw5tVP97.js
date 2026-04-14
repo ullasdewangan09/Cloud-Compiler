@@ -1,0 +1,1 @@
+import{r as a,j as e}from"./index-C6qi_1Ip.js";const n=a.memo(({children:s,className:r="",hover:t=!0})=>e.jsx("div",{className:`sk-plate sk-panel p-6 transition-all duration-300 ${t?"hover:sk-switch hover:-translate-y-1":""} ${r}`,children:s}));export{n as G};

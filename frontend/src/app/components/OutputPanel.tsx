@@ -1,7 +1,6 @@
 import { memo } from 'react';
 import { AlertTriangle, CheckCircle2, Clock, Loader2, Terminal, Trash2, XCircle } from 'lucide-react';
 
-import { GlassCard } from './GlassCard';
 import { ExecutionResponse } from '../../services/api';
 
 export type ExecutionStatus =
@@ -30,41 +29,47 @@ export const OutputPanel = memo(({ output, status, result, onClear }: OutputPane
       case 'pending':
         return {
           icon: <Clock className="w-3.5 h-3.5" />,
-          label: 'Queued',
-          color: 'bg-status-warning-bg text-status-warning',
+          label: 'IN_QUEUE',
+          color: 'text-amber',
+          indicator: 'text-amber',
         };
       case 'running':
         return {
           icon: <Loader2 className="w-3.5 h-3.5 animate-spin" />,
-          label: 'Running',
-          color: 'bg-status-running-bg text-status-running',
+          label: 'PROCESSING',
+          color: 'text-cyan',
+          indicator: 'text-cyan animate-pulse',
         };
       case 'completed':
       case 'success':
         return {
           icon: <CheckCircle2 className="w-3.5 h-3.5" />,
-          label: 'Success',
-          color: 'bg-status-success-bg text-status-success',
+          label: 'OPERATIONAL',
+          color: 'text-status-success',
+          indicator: 'text-status-success',
         };
       case 'compile_error':
         return {
           icon: <AlertTriangle className="w-3.5 h-3.5" />,
-          label: 'Compile Error',
-          color: 'bg-status-error-bg text-status-error',
+          label: 'CORE_ERROR',
+          color: 'text-status-error',
+          indicator: 'text-status-error',
         };
       case 'runtime_error':
       case 'timeout':
       case 'system_error':
         return {
           icon: <XCircle className="w-3.5 h-3.5" />,
-          label: status === 'timeout' ? 'Timeout' : 'Runtime Error',
-          color: 'bg-status-error-bg text-status-error',
+          label: status === 'timeout' ? 'DEADLINE_EX' : 'FAILURE',
+          color: 'text-status-error',
+          indicator: 'text-status-error',
         };
       default:
         return {
           icon: <Terminal className="w-3.5 h-3.5" />,
-          label: 'Ready',
-          color: 'bg-divider-subtle text-text-tertiary',
+          label: 'STANDBY',
+          color: 'text-text-tertiary',
+          indicator: 'text-text-tertiary opacity-30',
         };
     }
   };
@@ -81,36 +86,41 @@ export const OutputPanel = memo(({ output, status, result, onClear }: OutputPane
   const artifacts = result?.artifacts || [];
 
   return (
-    <GlassCard className="h-full min-h-0 flex flex-col">
-      <div className="flex items-center justify-between mb-4">
+    <div className="sk-plate sk-panel h-full min-h-0 flex flex-col p-5 border-divider">
+      <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
-          <Terminal className="w-4 h-4 text-text-secondary" />
-          <h3 className="text-sm font-semibold text-text">Output</h3>
+          <Terminal className="w-4 h-4 text-amber" />
+          <h3 className="text-[11px] font-black text-text tracking-widest">Console Output</h3>
         </div>
-        <div className="flex items-center gap-2">
-          <div className={`flex items-center gap-2 px-2.5 py-1 rounded-lg text-xs font-medium ${statusConfig.color}`}>
-            {statusConfig.icon}
-            <span>{statusConfig.label}</span>
+        <div className="flex items-center gap-3">
+          <div className={`sk-display sk-panel flex items-center gap-2 px-3 py-1.5 border-divider`}>
+            <span className={`sk-indicator ${statusConfig.indicator}`} />
+            <span className={`text-[10px] font-black tracking-widest ${statusConfig.color}`}>
+              {statusConfig.label}
+            </span>
           </div>
           <button
             onClick={onClear}
-            className="p-1.5 hover:bg-surface rounded-lg transition-colors"
-            title="Clear output"
+            className="sk-switch p-1.5 sk-panel"
+            title="Wipe screen"
           >
-            <Trash2 className="w-4 h-4 text-text-tertiary" />
+            <Trash2 className="w-3.5 h-3.5 text-text-tertiary" />
           </button>
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-auto rounded-xl border border-divider-subtle bg-surface-solid p-4 space-y-4">
+      <div className="flex-1 min-h-0 overflow-auto sk-display sk-panel p-5 space-y-6 custom-scrollbar">
         {summary && (
-          <div className="rounded-xl border border-status-error/20 bg-status-error-bg/60 p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-status-error mb-1">Diagnostic Summary</p>
-            <p className="text-sm text-text">{summary}</p>
+          <div className="sk-chassis sk-panel p-4 border-status-error/30 bg-status-error-bg/20">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="sk-indicator text-status-error animate-pulse" />
+              <p className="text-[10px] font-black tracking-widest text-status-error">Diagnostic Report</p>
+            </div>
+            <p className="text-xs font-bold text-text mb-2">{summary}</p>
             {!!result?.diagnostics?.details?.length && (
-              <div className="mt-2 space-y-1">
+              <div className="space-y-1.5 mt-3 pt-3 border-t border-status-error/10">
                 {result.diagnostics.details.map((detail, index) => (
-                  <p key={index} className="text-xs font-mono text-text-secondary whitespace-pre-wrap">
+                  <p key={index} className="text-[10px] font-mono text-status-error/70 whitespace-pre-wrap leading-relaxed">
                     {detail}
                   </p>
                 ))}
@@ -120,11 +130,11 @@ export const OutputPanel = memo(({ output, status, result, onClear }: OutputPane
         )}
 
         {hasTimings && (
-          <div className="grid grid-cols-2 gap-2">
-            <TimingCard label="Queue wait" value={result?.queue_wait_ms} />
-            <TimingCard label="Compile" value={result?.compile_time_ms} />
-            <TimingCard label="Execution" value={result?.execution_time_ms} />
-            <TimingCard label="Total" value={result?.total_time_ms} />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <TimingCard label="Queue Delay" value={result?.queue_wait_ms} />
+            <TimingCard label="Compile Time" value={result?.compile_time_ms} />
+            <TimingCard label="Execution Time" value={result?.execution_time_ms} />
+            <TimingCard label="Total Duration" value={result?.total_time_ms} />
           </div>
         )}
 
@@ -135,24 +145,28 @@ export const OutputPanel = memo(({ output, status, result, onClear }: OutputPane
         ))}
 
         {stdout ? (
-          <OutputSection title="Standard Output" value={stdout} />
+          <OutputSection title="Stdout Log" value={stdout} />
         ) : null}
 
         {stderr ? (
-          <OutputSection title="Standard Error" value={stderr} isError />
+          <OutputSection title="Stderr Error" value={stderr} isError />
         ) : null}
 
         {!summary && !stdout && !stderr && !output && (
           <div className="h-full min-h-[180px] flex items-center justify-center">
             <div className="text-center">
-              <Terminal className="w-10 h-10 mx-auto mb-3 text-text-tertiary opacity-40" />
-              <p className="text-sm text-text-secondary">Output will appear here</p>
-              <p className="text-xs text-text-tertiary mt-1">Run your code to see results</p>
+              <div className="relative mb-4">
+                <Terminal className="w-12 h-12 mx-auto text-text-tertiary opacity-10" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                   <span className="sk-indicator text-cyan/20 animate-ping" style={{ width: '2rem', height: '2rem' }} />
+                </div>
+              </div>
+              <p className="text-[10px] font-black text-text-tertiary tracking-widest">Awaiting Command Input...</p>
             </div>
           </div>
         )}
       </div>
-    </GlassCard>
+    </div>
   );
 });
 
@@ -167,25 +181,27 @@ const PreviewSection = memo(({
   };
 }) => {
   return (
-    <div className="rounded-xl border border-divider-subtle bg-surface p-3">
-      <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary mb-2">{artifact.label}</p>
+    <div className="sk-chassis sk-panel p-4 border-divider">
+      <p className="text-[10px] font-black tracking-widest text-text-tertiary mb-3">{artifact.label}</p>
       {artifact.description ? (
-        <p className="text-xs text-text-secondary mb-3">{artifact.description}</p>
+        <p className="text-[11px] font-bold text-text-secondary mb-4">{artifact.description}</p>
       ) : null}
-      <img
-        src={`data:${artifact.mime_type};base64,${artifact.base64_data}`}
-        alt={artifact.label}
-        className="w-full rounded-lg border border-divider-subtle bg-background/30 object-contain"
-      />
+      <div className="sk-display sk-panel p-2">
+        <img
+          src={`data:${artifact.mime_type};base64,${artifact.base64_data}`}
+          alt={artifact.label}
+          className="w-full h-auto object-contain opacity-90 brightness-110"
+        />
+      </div>
     </div>
   );
 });
 
 const TimingCard = memo(({ label, value }: { label: string; value: number | null | undefined }) => {
   return (
-    <div className="rounded-lg border border-divider-subtle bg-surface px-3 py-2">
-      <p className="text-[11px] uppercase tracking-wide text-text-tertiary">{label}</p>
-      <p className="text-sm font-semibold text-text">{value == null ? 'N/A' : `${value.toFixed(2)} ms`}</p>
+    <div className="sk-chassis sk-panel p-3 border-divider">
+      <p className="text-[9px] font-black tracking-widest text-text-tertiary mb-1">{label}</p>
+      <p className="text-xs font-black text-text tracking-widest">{value == null ? '0.00' : value.toFixed(2)}<span className="text-[9px] ml-1 opacity-40">ms</span></p>
     </div>
   );
 });
@@ -200,15 +216,16 @@ const OutputSection = memo(({
   isError?: boolean;
 }) => {
   return (
-    <div>
-      <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${isError ? 'text-status-error' : 'text-text-secondary'}`}>
-        {title}
-      </p>
-      <textarea
-        value={value}
-        readOnly
-        className="w-full min-h-[120px] resize-y rounded-xl border border-divider-subtle bg-background/40 p-3 text-sm font-mono text-text leading-6 whitespace-pre-wrap overflow-auto focus:outline-none"
-      />
+    <div className="space-y-2">
+      <div className="flex items-center gap-2 ml-1">
+        <span className={`sk-indicator ${isError ? 'text-status-error' : 'text-cyan shadow-[0_0_5px_rgba(0,209,255,0.4)]'}`} />
+        <p className={`text-[10px] font-black tracking-widest ${isError ? 'text-status-error' : 'text-text-tertiary'}`}>
+          {title}
+        </p>
+      </div>
+      <pre className="w-full min-h-[120px] sk-display sk-panel p-4 text-xs font-mono text-cyan tracking-widest leading-relaxed whitespace-pre-wrap focus:outline-none custom-scrollbar border-divider overflow-auto">
+        {value}
+      </pre>
     </div>
   );
 });

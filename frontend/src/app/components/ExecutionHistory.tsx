@@ -54,17 +54,17 @@ export function ExecutionHistory({ history, onSelect }: ExecutionHistoryProps) {
   };
 
   return (
-    <GlassCard className="h-full flex flex-col">
-      <div className="flex items-center gap-2 mb-4">
-        <History className="w-4 h-4 text-text-secondary" />
-        <h3 className="text-sm font-semibold text-text">Execution History</h3>
+    <div className="sk-plate sk-panel h-full flex flex-col p-5 border-divider">
+      <div className="flex items-center gap-2 mb-5">
+        <History className="w-4 h-4 text-cyan" />
+        <h3 className="text-[11px] font-black text-text tracking-widest uppercase">Execution History</h3>
       </div>
-      <div className="flex-1 overflow-auto space-y-2">
+      <div className="flex-1 overflow-auto space-y-3 pr-2 custom-scrollbar">
         {history.length === 0 ? (
           <div className="h-full flex items-center justify-center">
-            <div className="text-center">
-              <History className="w-10 h-10 mx-auto mb-3 text-text-tertiary opacity-40" />
-              <p className="text-sm text-text-secondary">No executions yet</p>
+            <div className="text-center opacity-20">
+              <History className="w-10 h-10 mx-auto mb-3 text-text-tertiary" />
+              <p className="text-[10px] font-black text-text-tertiary tracking-widest uppercase">No previous sessions.</p>
             </div>
           </div>
         ) : (
@@ -72,28 +72,28 @@ export function ExecutionHistory({ history, onSelect }: ExecutionHistoryProps) {
             <button
               key={item.id}
               onClick={() => onSelect(item)}
-              className="w-full p-3 bg-surface-solid hover:bg-surface border border-divider-subtle rounded-xl text-left transition-all group"
+              className="w-full p-4 sk-chassis sk-panel text-left transition-all group hover:border-cyan/30"
             >
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-medium text-primary">{item.language.toUpperCase()}</span>
-                <div className="flex items-center gap-2">
-                  {getStatusIcon(item.status)}
-                  <span className="text-xs text-text-tertiary">{formatTime(item.timestamp)}</span>
+                <span className="text-[9px] font-black text-cyan uppercase tracking-widest">{item.language}</span>
+                <div className="flex items-center gap-3">
+                  <span className={`sk-indicator ${
+                    (item.status === 'success' || item.status === 'completed') 
+                      ? 'text-status-success shadow-[0_0_5px_rgba(74,222,128,0.4)]'
+                      : 'text-status-error shadow-[0_0_5px_rgba(248,113,113,0.4)]'
+                  }`} />
+                  <span className="text-[9px] font-bold text-text-tertiary uppercase">{formatTime(item.timestamp)}</span>
                 </div>
               </div>
-              <p className="text-xs font-semibold text-text">{item.entryFile}</p>
-              <p className="text-xs font-mono text-text-secondary line-clamp-2">
-                {item.files.find((file) => file.filename === item.entryFile)?.content.split('\n')[0] || 'Empty file'}
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-text-tertiary">
-                {item.compilerProfile ? <span>{item.compilerProfile}</span> : null}
-                {item.queueWaitMs != null ? <span>queue {item.queueWaitMs.toFixed(0)}ms</span> : null}
-                {item.totalTimeMs != null ? <span>total {item.totalTimeMs.toFixed(0)}ms</span> : null}
+              <p className="text-[11px] font-black text-text tracking-wider mb-2">{item.entryFile}</p>
+              <div className="flex flex-wrap gap-x-3 gap-y-1 mt-3 pt-3 border-t border-divider opacity-50">
+                <span className="text-[9px] font-bold text-text-tertiary uppercase tracking-widest">{item.compilerProfile}</span>
+                <span className="text-[9px] font-bold text-text-tertiary uppercase tracking-widest">Total: {item.totalTimeMs?.toFixed(0)}ms</span>
               </div>
             </button>
           ))
         )}
       </div>
-    </GlassCard>
+    </div>
   );
 }

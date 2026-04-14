@@ -25,7 +25,7 @@ def serialize_project(project: Project, owner_username: str) -> dict:
         "name": project.name,
         "language": project.language,
         "input": project.stdin_text or "",
-        "files": json.loads(project.files_json),
+        "files": json.loads(project.files_json or "[]"),
         "entry_file": project.entry_file,
         "compiler_profile": project.compiler_profile,
         "compiler_flags": project.compiler_flags or "",
@@ -49,7 +49,7 @@ def list_projects(
         .order_by(Project.updated_at.desc())
         .all()
     )
-    return [serialize_project(project, current_user.username) for project in projects]
+    return [serialize_project(project, current_user.username or "anonymous") for project in projects]
 
 
 @router.post("/save")
@@ -73,7 +73,7 @@ def save_project(
     db.add(project)
     db.commit()
     db.refresh(project)
-    return serialize_project(project, current_user.username)
+    return serialize_project(project, current_user.username or "anonymous")
 
 
 @router.put("/{project_id}")
@@ -105,7 +105,7 @@ def update_project(
         project.share_id = None
     db.commit()
     db.refresh(project)
-    return serialize_project(project, current_user.username)
+    return serialize_project(project, current_user.username or "anonymous")
 
 
 @router.post("/{project_id}/share")
@@ -127,7 +127,7 @@ def share_project(
         project.share_id = uuid.uuid4().hex[:12]
     db.commit()
     db.refresh(project)
-    return serialize_project(project, current_user.username)
+    return serialize_project(project, current_user.username or "anonymous")
 
 
 @router.get("/shared/{share_id}")
@@ -138,4 +138,22 @@ def get_shared_project(share_id: str, db: Session = Depends(get_db)):
 
     owner = db.query(User).filter(User.id == project.owner_id).first()
     owner_username = owner.username if owner else "anonymous"
-    return serialize_project(project, owner_username)
+    return serialize_project(project, owner_username or "anonymous")
+    
+@router.delete("/{project_id}")
+def delete_project(
+    project_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    project = (
+        db.query(Project)
+        .filter(Project.id == project_id, Project.owner_id == current_user.id)
+        .first()
+    )
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found or unauthorized")
+
+    db.delete(project)
+    db.commit()
+    return {"message": "Project deleted successfully"}

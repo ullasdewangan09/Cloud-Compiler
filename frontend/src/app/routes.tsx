@@ -9,8 +9,18 @@ export const router = createBrowserRouter([
     element: <Layout />,
     children: [
       {
-        index: true,
-        lazy: () => import('./pages/LandingPage').then(m => ({ Component: m.LandingPage })),
+        path: '',
+        element: <ProtectedRoute children={null} />,
+        children: [
+          {
+            index: true,
+            lazy: () => import('./pages/Workspace').then(m => ({ Component: m.Workspace })),
+          },
+          {
+            path: 'workspace',
+            lazy: () => import('./pages/Workspace').then(m => ({ Component: m.Workspace })),
+          },
+        ],
       },
       {
         path: 'login',
@@ -25,18 +35,8 @@ export const router = createBrowserRouter([
         lazy: () => import('./pages/SharedProject').then(m => ({ Component: m.SharedProject })),
       },
       {
-        path: 'workspace',
-        element: <ProtectedRoute children={null} />, // We will handle children below or use lazy.
-        children: [
-          {
-            index: true,
-            lazy: () => import('./pages/Workspace').then(m => ({ Component: m.Workspace })),
-          },
-        ],
-      },
-      {
         path: 'metrics',
-        element: <ProtectedRoute children={null} />,
+        element: <ProtectedRoute adminOnly children={null} />,
         children: [
           {
             index: true,
@@ -46,7 +46,7 @@ export const router = createBrowserRouter([
       },
       {
         path: 'dashboard',
-        element: <ProtectedRoute children={null} />,
+        element: <ProtectedRoute adminOnly children={null} />,
         children: [
           {
             index: true,

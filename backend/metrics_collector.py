@@ -24,7 +24,7 @@ def _safe_json_load(raw_item):
 def _recent_history(limit: int = 200) -> list[dict]:
     raw_items = redis_client.lrange(EXECUTION_HISTORY_KEY, 0, max(0, limit - 1))
     items: list[dict] = []
-    for raw_item in raw_items:
+    for raw_item in raw_items:  # type: ignore[union-attr]
         payload = _safe_json_load(raw_item)
         if payload:
             items.append(payload)

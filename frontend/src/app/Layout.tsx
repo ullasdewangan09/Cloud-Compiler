@@ -1,25 +1,27 @@
 import { Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router';
 import { Navbar } from './components/Navbar';
+import { Loader2 } from 'lucide-react';
+
+const AUTH_ROUTES = ['/login', '/register'];
 
 export function Layout() {
   const location = useLocation();
-  const isLanding = location.pathname === '/';
-  const hideNavbar = isLanding || location.pathname === '/login' || location.pathname === '/register';
+  const hideNavbar = AUTH_ROUTES.includes(location.pathname);
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden">
-      {!isLanding && <div className="app-dynamic-bg" aria-hidden="true" />}
-      <div className="relative z-10 min-h-screen">
-        {!hideNavbar && <Navbar />}
+    <div className="relative h-screen flex flex-col overflow-hidden bg-background">
+      {!hideNavbar && <Navbar />}
+      
+      <main className="flex-1 overflow-y-auto relative custom-scrollbar">
         <Suspense fallback={
-          <div className="flex h-screen w-full items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-sky border-t-transparent" />
+          <div className="flex h-full w-full items-center justify-center bg-background">
+            <Loader2 className="h-8 w-8 animate-spin text-amber" />
           </div>
         }>
           <Outlet />
         </Suspense>
-      </div>
+      </main>
     </div>
   );
 }

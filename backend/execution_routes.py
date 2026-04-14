@@ -177,7 +177,7 @@ async def get_execute_result(job_id: str):
         }
 
     try:
-        parsed = json.loads(result)
+        parsed = json.loads(result)  # type: ignore[arg-type]
     except json.JSONDecodeError:
         parsed = {
             "status": "completed",

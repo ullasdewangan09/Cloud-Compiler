@@ -30,17 +30,22 @@ export function InteractiveSessionPanel({
   }
 
   return (
-    <GlassCard className="h-full flex flex-col">
-      <div className="flex items-center justify-between gap-3 mb-4">
-        <div className="flex items-center gap-2">
-          <MonitorPlay className="w-4 h-4 text-text-secondary" />
+    <div className="sk-plate sk-panel h-full flex flex-col p-5 border-cyan/10">
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
+        <div className="flex items-center gap-3">
+          <div className="sk-chassis sk-panel p-2 border-cyan/20">
+            <MonitorPlay className="w-5 h-5 text-cyan" />
+          </div>
           <div>
-            <h3 className="text-sm font-semibold text-text">Interactive Swing</h3>
-            <p className="text-xs text-text-secondary">
-              {launching
-                ? 'Starting browser session...'
-                : session?.message || 'Interactive session'}
-            </p>
+            <h3 className="text-[10px] font-black text-text uppercase tracking-[0.2em]">Live Session</h3>
+            <div className="flex items-center gap-2 mt-1">
+              <span className={`sk-indicator ${launching ? 'text-amber animate-pulse' : 'text-cyan shadow-[0_0_5px_rgba(0,209,255,0.4)]'}`} />
+              <p className="text-[9px] font-bold text-text-tertiary uppercase tracking-widest">
+                {launching
+                  ? 'Connecting...'
+                  : session?.message || 'Connected'}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -49,52 +54,58 @@ export function InteractiveSessionPanel({
             <button
               onClick={() => window.open(session.interactive_url || '', '_blank', 'noopener,noreferrer')}
               disabled={!session.interactive_url}
-              className="glass-button px-3 py-2 rounded-xl flex items-center gap-2 text-xs disabled:opacity-60"
+              className="sk-switch px-4 py-2 sk-panel flex items-center gap-2 text-[10px] font-black uppercase tracking-widest disabled:opacity-40"
             >
-              <ExternalLink className="w-3.5 h-3.5" />
-              Open
+              <ExternalLink className="w-3.5 h-3.5 text-cyan" />
+              Open Link
             </button>
             <button
               onClick={() => void copyLink()}
               disabled={!session.interactive_url}
-              className="glass-button px-3 py-2 rounded-xl flex items-center gap-2 text-xs disabled:opacity-60"
+              className="sk-switch px-4 py-2 sk-panel flex items-center gap-2 text-[10px] font-black uppercase tracking-widest disabled:opacity-40"
             >
-              <Copy className="w-3.5 h-3.5" />
-              Copy
+              <Copy className="w-3.5 h-3.5 text-cyan" />
+              Copy Link
             </button>
             <button
               onClick={onStop}
               disabled={stopping}
-              className="glass-button px-3 py-2 rounded-xl flex items-center gap-2 text-xs disabled:opacity-60"
+              className="sk-switch px-4 py-2 sk-panel flex items-center gap-2 text-[10px] font-black uppercase tracking-widest border-status-error/30 text-status-error disabled:opacity-40"
             >
-              {stopping ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Square className="w-3.5 h-3.5" />}
-              Stop
+              {stopping ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Square className="w-3.5 h-3.5 fill-status-error/30" />}
+              End Session
             </button>
           </div>
         ) : null}
       </div>
 
-      <div className="flex-1 min-h-0 rounded-xl border border-divider-subtle bg-surface-solid overflow-hidden">
+      <div className="flex-1 min-h-0 sk-display sk-panel overflow-hidden border-divider relative">
         {launching ? (
-          <div className="h-full min-h-[220px] flex items-center justify-center">
+          <div className="h-full min-h-[220px] flex items-center justify-center bg-background/40">
             <div className="text-center">
-              <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-3" />
-              <p className="text-sm text-text">Preparing your Java Swing window</p>
-              <p className="text-xs text-text-secondary mt-1">This can take a few seconds the first time.</p>
+              <div className="relative mb-6">
+                <Loader2 className="w-10 h-10 animate-spin text-cyan mx-auto" />
+                <div className="absolute inset-0 sk-indicator text-cyan/20 animate-ping" />
+              </div>
+              <p className="text-[10px] font-black text-text uppercase tracking-[0.2em]">Connecting to Session...</p>
+              <p className="text-[9px] font-bold text-text-tertiary uppercase mt-2 tracking-widest">Starting remote environment</p>
             </div>
           </div>
         ) : session?.interactive_url ? (
           <iframe
             src={session.interactive_url}
             title="Interactive Java Swing Session"
-            className="w-full h-full min-h-[300px] bg-white"
+            className="w-full h-full min-h-[300px] border-none"
           />
         ) : (
-          <div className="h-full min-h-[220px] flex items-center justify-center px-6 text-center">
-            <p className="text-sm text-text-secondary">Interactive session URL is not available.</p>
+          <div className="h-full min-h-[220px] flex items-center justify-center px-6 text-center bg-background/40">
+            <p className="text-[10px] font-black text-text-tertiary uppercase tracking-widest">No Active Session</p>
           </div>
         )}
+        
+        {/* CRT Scanline Overlay */}
+        <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] z-50" style={{ backgroundSize: '100% 2px, 3px 100%' }} />
       </div>
-    </GlassCard>
+    </div>
   );
 }

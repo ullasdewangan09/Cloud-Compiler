@@ -9,8 +9,8 @@ interface GlassCardProps {
 export const GlassCard = memo(({ children, className = '', hover = true }: GlassCardProps) => {
   return (
     <div
-      className={`glass-card rounded-2xl p-6 transition-all duration-300 ${
-        hover ? 'hover:shadow-2xl hover:-translate-y-1' : ''
+      className={`sk-plate sk-panel p-6 transition-all duration-300 ${
+        hover ? 'hover:sk-switch hover:-translate-y-1' : ''
       } ${className}`}
     >
       {children}

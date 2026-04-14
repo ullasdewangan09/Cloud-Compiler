@@ -1,118 +1,93 @@
-import { Cuboid, LogOut, Sun, Moon, User, BarChart3 } from 'lucide-react';
+import { Cuboid } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router';
 import { useAuth } from '../../context/AuthContext';
-import { useState } from 'react';
+import { CinematicThemeSwitcher } from './ui/cinematic-theme-switcher';
 
 export function Navbar() {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [isDark, setIsDark] = useState(
-    document.documentElement.classList.contains('dark')
-  );
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
-  const toggleTheme = () => {
-    const newTheme = !isDark;
-    setIsDark(newTheme);
-    if (newTheme) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  };
-
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <nav className="sticky top-0 z-50 glass-card rounded-none border-0 border-b border-glass-border">
-      <div className="max-w-7xl mx-auto px-6 py-4">
-        <div className="flex items-center justify-between">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2.5 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky to-sky-deep flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Cuboid className="w-5 h-5 text-white" strokeWidth={2.5} />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-text">VeloQube | Cloud Compiler</h1>
-              <p className="text-xs text-text-tertiary">Distributed Execution Platform</p>
-            </div>
-          </Link>
-
-          {/* Nav Items */}
-          {isAuthenticated && (
-            <div className="flex items-center gap-4">
-              <Link
-                to="/workspace"
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  isActive('/workspace')
-                    ? 'bg-primary/20 text-text'
-                    : 'text-text-secondary hover:text-text hover:bg-surface'
-                }`}
-              >
-                Workspace
-              </Link>
-              <Link
-                to="/metrics"
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
-                  isActive('/metrics')
-                    ? 'bg-primary/20 text-text'
-                    : 'text-text-secondary hover:text-text hover:bg-surface'
-                }`}
-              >
-                <BarChart3 className="w-4 h-4" />
-                Metrics
-              </Link>
-              <Link
-                to="/dashboard"
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  isActive('/dashboard')
-                    ? 'bg-primary/20 text-text'
-                    : 'text-text-secondary hover:text-text hover:bg-surface'
-                }`}
-              >
-                Dashboard
-              </Link>
-            </div>
-          )}
-
-          {/* Right Actions */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={toggleTheme}
-              className="p-2.5 rounded-lg hover:bg-surface transition-colors"
-              title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-            >
-              {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            </button>
-
-            {isAuthenticated ? (
-              <>
-                <div className="px-3 py-2 rounded-lg bg-surface flex items-center gap-2">
-                  <User className="w-4 h-4 text-text-secondary" />
-                  <span className="text-sm text-text-secondary">User</span>
-                </div>
-                <button
-                  onClick={handleLogout}
-                  className="glass-button px-4 py-2.5 rounded-lg text-sm font-medium flex items-center gap-2"
-                >
-                  <LogOut className="w-4 h-4" />
-                  Logout
-                </button>
-              </>
-            ) : (
-              <Link
-                to="/login"
-                className="glass-button px-4 py-2.5 rounded-lg text-sm font-medium"
-              >
-                Login
-              </Link>
-            )}
+    <nav className="sticky top-0 z-50 sk-plate rounded-none border-x-0 border-t-0 p-0">
+      <div className="max-w-[1920px] mx-auto px-8 h-20 flex items-center justify-between border-b border-divider">
+        {/* Logo Section - Machined Chassis */}
+        <Link to="/" className="flex items-center gap-4 group">
+          <div className="w-12 h-12 sk-plate sk-panel flex items-center justify-center border-amber/20 group-hover:border-amber/50 transition-colors">
+            <Cuboid className="w-6 h-6 text-amber drop-shadow-[0_0_8px_rgba(255,149,0,0.5)]" />
           </div>
+          <div className="hidden sm:block">
+            <h1 className="text-sm font-black text-text tracking-widest uppercase">VeloQube</h1>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="sk-indicator text-cyan animate-pulse" />
+              <p className="text-[10px] font-bold text-text-tertiary tracking-widest uppercase">Cloud Compiler</p>
+            </div>
+          </div>
+        </Link>
+
+        {/* Console Navigation */}
+        {isAuthenticated && user?.role === 'admin' && (
+          <div className="flex items-center gap-2 bg-background/20 p-1.5 sk-panel sk-chassis">
+            <Link
+              to="/workspace"
+              className={`px-6 py-2 sk-panel text-[11px] font-black transition-all flex items-center gap-2 ${
+                isActive('/workspace') || isActive('/')
+                  ? 'sk-plate text-amber'
+                  : 'text-text-tertiary hover:text-text-secondary'
+              }`}
+            >
+              {(isActive('/workspace') || isActive('/')) && <span className="sk-indicator text-amber" />}
+              Workspace
+            </Link>
+            <Link
+              to="/metrics"
+              className={`px-6 py-2 sk-panel text-[11px] font-black transition-all flex items-center gap-2 ${
+                isActive('/metrics')
+                  ? 'sk-plate text-amber'
+                  : 'text-text-tertiary hover:text-text-secondary'
+              }`}
+            >
+              {isActive('/metrics') && <span className="sk-indicator text-amber" />}
+              History
+            </Link>
+          </div>
+        )}
+
+        {/* Control Interface */}
+        <div className="flex items-center gap-4">
+          {/* Cinematic Theme Toggle */}
+          <CinematicThemeSwitcher />
+
+          <div className="h-8 w-px bg-divider mx-2" />
+
+          {isAuthenticated ? (
+            <div className="flex items-center gap-3">
+              <div className="hidden lg:flex flex-col items-end">
+                <span className="text-[10px] font-bold text-text-tertiary tracking-tighter uppercase">Account</span>
+                <span className="text-xs font-black text-text">{user?.username || 'User'}</span>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="px-6 py-2 sk-chassis border-divider text-[11px] font-black text-status-error/80 hover:text-status-error transition-colors"
+              >
+                Logout
+              </button>
+            </div>
+          ) : (
+            <Link
+              to="/login"
+              className="sk-switch px-8 py-2.5 sk-panel text-xs font-black text-cyan"
+            >
+              Login
+            </Link>
+          )}
         </div>
       </div>
     </nav>
